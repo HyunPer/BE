@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:pleos-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  h2:
+    console:
+      enabled: false

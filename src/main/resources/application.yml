@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: pleos-backend
+  datasource:
+    # 로컬 개발용 파일 DB. 재시작해도 데이터가 남는다 (BE/data/ 아래, git 제외).
+    url: jdbc:h2:file:./data/pleos;MODE=PostgreSQL;AUTO_SERVER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+server:
+  # 로컬 8080·8081은 Docker Desktop이 사용 중이라 8090을 기본값으로 둔다. PORT 환경변수로 변경 가능.
+  port: ${PORT:8090}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
