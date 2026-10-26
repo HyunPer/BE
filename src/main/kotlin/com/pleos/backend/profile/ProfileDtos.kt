@@ -90,7 +90,7 @@ data class LightDto(
 )
 
 fun Profile.toResponse() = ProfileResponse(
-    id = checkNotNull(id) { "저장되지 않은 프로필은 응답으로 변환할 수 없습니다" },
+    id = requireId(),
     name = name,
     display = DisplayDto(display.themeColor, display.wallpaperId, display.widgets.toList()),
     seat = SeatDto(seat.reclineAngle, seat.slidePosition, seat.heatingLevel, seat.steeringWheelHeating),
@@ -101,7 +101,7 @@ fun Profile.toResponse() = ProfileResponse(
     updatedAt = updatedAt,
 )
 
-fun ProfileRequest.toEntity() = Profile(name = name.trim()).also { it.applyFrom(this) }
+fun ProfileRequest.toEntity(ownerId: UUID) = Profile(ownerId = ownerId, name = name.trim()).also { it.applyFrom(this) }
 
 fun Profile.applyFrom(request: ProfileRequest) {
     name = request.name.trim()

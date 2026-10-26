@@ -1,5 +1,6 @@
 package com.pleos.backend.profile
 
+import com.pleos.backend.common.BaseEntity
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
@@ -7,24 +8,22 @@ import jakarta.persistence.Embeddable
 import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.OrderColumn
-import jakarta.persistence.PrePersist
-import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
-import java.time.Instant
 import java.util.UUID
 
 /**
- * 한 사람의 차량 커스텀 설정 묶음.
+ * 한 사람의 차량 커스텀 설정 묶음. 한 사용자가 여러 개를 만들 수 있다(예: 평일 출근 / 주말 캠핑).
  * 폰 앱에서 편집하고, 차량 앱이 시동 시 받아서 Vehicle SDK로 적용한다.
  */
 @Entity
-@Table(name = "profiles")
+@Table(name = "profiles", indexes = [Index(columnList = "owner_id")])
 class Profile(
+    @Column(name = "owner_id", nullable = false, updatable = false)
+    val ownerId: UUID,
+
     @Column(nullable = false, length = 20)
     var name: String,
 
@@ -42,32 +41,7 @@ class Profile(
 
     @Column(length = 100)
     var welcomeSoundId: String? = null,
-) {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    var id: UUID? = null
-        protected set
-
-    @Column(nullable = false, updatable = false)
-    var createdAt: Instant = Instant.EPOCH
-        protected set
-
-    @Column(nullable = false)
-    var updatedAt: Instant = Instant.EPOCH
-        protected set
-
-    @PrePersist
-    fun onCreate() {
-        val now = Instant.now()
-        createdAt = now
-        updatedAt = now
-    }
-
-    @PreUpdate
-    fun onUpdate() {
-        updatedAt = Instant.now()
-    }
-}
+) : BaseEntity()
 
 /** 차량 앱 안의 커스텀 홈 화면. 시스템 전체 테마는 불확실하므로 앱 내 범위로 한정. */
 @Embeddable
