@@ -14,6 +14,11 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  servlet:
+    multipart:
+      # 실제 제한은 pleos.files.max-bytes에서 한국어 오류로 응답한다. 여기는 그보다 넉넉하게 둔다.
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 server:
   # 로컬 8080·8081은 Docker Desktop이 사용 중이라 8090을 기본값으로 둔다. PORT 환경변수로 변경 가능.
@@ -24,3 +29,9 @@ management:
     web:
       exposure:
         include: health,info
+
+pleos:
+  files:
+    # 테마 이미지 저장 위치 (BE/data/ 아래, git 제외)
+    dir: ./data/files
+    max-bytes: 3145728 # 3MB

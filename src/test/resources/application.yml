@@ -7,3 +7,8 @@ spring:
   h2:
     console:
       enabled: false
+
+pleos:
+  files:
+    dir: ./build/test-files
+    max-bytes: 3145728

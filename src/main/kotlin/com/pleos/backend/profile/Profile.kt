@@ -41,17 +41,15 @@ class Profile(
 
     @Column(length = 100)
     var welcomeSoundId: String? = null,
+
+    /** 차량 앱 화면 테마. 없으면 기본 테마. 색·배경·캐릭터·버튼 모양과 앰비언트 색은 테마가 정한다. */
+    @Column(name = "theme_id")
+    var themeId: UUID? = null,
 ) : BaseEntity()
 
-/** 차량 앱 안의 커스텀 홈 화면. 시스템 전체 테마는 불확실하므로 앱 내 범위로 한정. */
+/** 차량 앱 홈에 띄울 위젯과 순서. 모양은 테마(widgetStyle)가 정한다. */
 @Embeddable
 class DisplaySettings(
-    @Column(name = "display_theme_color", nullable = false, length = 7)
-    var themeColor: String = "#1E88E5",
-
-    @Column(name = "display_wallpaper_id", length = 100)
-    var wallpaperId: String? = null,
-
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "profile_widgets", joinColumns = [JoinColumn(name = "profile_id")])
     @OrderColumn(name = "position")
@@ -85,12 +83,9 @@ class ClimateSettings(
     var fanSpeed: Int = 3,
 )
 
-/** Vehicle SDK Light. 제어 가능 여부 미확정 → 불가 시 앱 화면 컬러로 대체. */
+/** Vehicle SDK Light. 색은 테마(ambientColor)를 따르고, 밝기만 사람마다 다르게 둔다. */
 @Embeddable
 class LightSettings(
-    @Column(name = "light_color", nullable = false, length = 7)
-    var color: String = "#FFFFFF",
-
     @Column(name = "light_brightness", nullable = false)
     var brightness: Int = 50,
 )

@@ -29,18 +29,18 @@ class OpenApiConfig {
             Info()
                 .title("Pleos Backend API")
                 .version("v1")
-                .description("폰 앱에서 만든 프로필을 저장하고, 차량 앱이 시동 시 받아 적용한다."),
+                .description("폰 앱에서 만든 프로필을 저장하고, 차량 앱이 탑승 시 받아 적용한다. 차량 앱 화면 테마를 만들고 공유한다."),
         )
         .components(Components().addSecuritySchemes(BEARER, SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer")))
         .addSecurityItem(SecurityRequirement().addList(BEARER))
 
     @Bean
     fun phoneApi(): GroupedOpenApi =
-        GroupedOpenApi.builder().group("phone").displayName("폰 앱 (사용자 토큰)").pathsToMatch("/api/v1/**").build()
+        GroupedOpenApi.builder().group("phone").displayName("폰 앱 (사용자 토큰)").pathsToMatch("/api/v1/**", "/files/**").build()
 
     @Bean
     fun vehicleApi(): GroupedOpenApi =
-        GroupedOpenApi.builder().group("vehicle").displayName("차량 앱 (차량 토큰)").pathsToMatch("/vehicle-api/v1/**").build()
+        GroupedOpenApi.builder().group("vehicle").displayName("차량 앱 (차량 토큰)").pathsToMatch("/vehicle-api/v1/**", "/files/**").build()
 
     private companion object {
         const val BEARER = "bearer"

@@ -67,14 +67,23 @@ class VehicleFlowTest : ApiTestSupport() {
     }
 
     @Test
-    fun `다음 운전자를 예약하면 차량 앱이 시동 시 받아 적용한다`() {
+    fun `차량 설정을 먼저 받고, 적용 완료를 보고해야 테마를 받는다`() {
         val car = registerVehicle()
         val mom = signUp("엄마")
         val kid = signUp("대학생 자녀")
         pair(mom, car.pairingCode)
         pair(kid, car.pairingCode)
         val momProfile = createProfile(mom, """{"name":"엄마 출근"}""")
-        val kidProfile = createProfile(kid, """{"name":"밤 드라이브","climate":{"temperature":19.0,"fanSpeed":4}}""")
+        val kidProfile = createProfile(
+            kid,
+            """
+            {"name":"밤 드라이브",
+             "climate":{"temperature":19.0,"fanSpeed":4},
+             "display":{"widgets":["music"]},
+             "light":{"brightness":80},
+             "welcomeSoundId":"chime-01"}
+            """.trimIndent(),
+        )
 
         // 예약 전: 차량 앱은 204
         mockMvc.get("/vehicle-api/v1/me/next-driver") { bearer(car.token) }.andExpect { status { isNoContent() } }
@@ -97,21 +106,32 @@ class VehicleFlowTest : ApiTestSupport() {
             jsonPath("$.driverNickname") { value("대학생 자녀") }
         }
 
-        // 시동: 차량 앱이 조회 → 적용 → 보고
+        // 1단계: 차량 설정만 내려온다. 테마·조명·사운드는 없다.
         val next = mockMvc.get("/vehicle-api/v1/me/next-driver") { bearer(car.token) }.andExpect {
             status { isOk() }
             jsonPath("$.driverNickname") { value("대학생 자녀") }
-            jsonPath("$.profile.climate.temperature") { value(19.0) }
+            jsonPath("$.vehicleSettings.climate.temperature") { value(19.0) }
+            jsonPath("$.vehicleSettings.seat.reclineAngle") { value(100) }
+            jsonPath("$.skin") { doesNotExist() }
+            jsonPath("$.vehicleSettings.light") { doesNotExist() }
+            jsonPath("$.vehicleSettings.display") { doesNotExist() }
         }.andReturn().response.contentAsString
         val reservationId = next.read("$.reservationId")
 
-        repeat(2) { // 재시도해도 같은 결과
+        // 2단계: 적용 완료를 보고하면 웰컴 묶음이 온다. 재시도해도 같은 결과.
+        repeat(2) {
             mockMvc.post("/vehicle-api/v1/me/next-driver/$reservationId/applied") { bearer(car.token) }.andExpect {
                 status { isOk() }
-                jsonPath("$.status") { value("APPLIED") }
-                jsonPath("$.appliedAt") { exists() }
+                jsonPath("$.profileId") { value(kidProfile) }
+                jsonPath("$.skin.name") { value("기본") }
+                jsonPath("$.widgets[0]") { value("music") }
+                jsonPath("$.ambientLight.color") { value("#FFFFFF") }
+                jsonPath("$.ambientLight.brightness") { value(80) }
+                jsonPath("$.welcomeSoundId") { value("chime-01") }
+                jsonPath("$.greeting") { value("대학생 자녀님, 밤 드라이브 설정을 적용했어요") }
             }
         }
+        mockMvc.get("/api/v1/vehicles/${car.id}/next-driver") { bearer(kid) }.andExpect { status { isNoContent() } }
         mockMvc.get("/vehicle-api/v1/me/next-driver") { bearer(car.token) }.andExpect { status { isNoContent() } }
     }
 
@@ -157,23 +177,35 @@ class VehicleFlowTest : ApiTestSupport() {
     }
 
     @Test
-    fun `차량 앱은 멤버별 프로필 목록으로 1탭 선택 화면을 만든다`() {
+    fun `예약이 없으면 1탭으로 고른 프로필도 같은 순서로 적용한다`() {
         val car = registerVehicle()
         val mom = signUp("엄마")
         val dad = signUp("아빠")
         pair(mom, car.pairingCode)
         pair(dad, car.pairingCode)
-        createProfile(mom, """{"name":"출근"}""")
+        createProfile(mom, """{"name":"출근","light":{"brightness":60}}""")
         createProfile(mom, """{"name":"주말"}""")
-        createProfile(signUp("남"), """{"name":"보이면 안 됨"}""")
+        val outsider = createProfile(signUp("남"), """{"name":"보이면 안 됨"}""")
 
-        mockMvc.get("/vehicle-api/v1/me/profiles") { bearer(car.token) }.andExpect {
+        val list = mockMvc.get("/vehicle-api/v1/me/profiles") { bearer(car.token) }.andExpect {
             status { isOk() }
             jsonPath("$", hasSize<Any>(2))
             jsonPath("$[0].nickname") { value("엄마") }
             jsonPath("$[0].profiles", hasSize<Any>(2))
+            jsonPath("$[0].profiles[0].vehicleSettings.climate.temperature") { value(22.0) }
+            jsonPath("$[0].profiles[0].skin") { doesNotExist() }
             jsonPath("$[1].profiles", hasSize<Any>(0))
+        }.andReturn().response.contentAsString
+        val chosen = list.read("$[0].profiles[0].profileId")
+
+        mockMvc.post("/vehicle-api/v1/me/profiles/$chosen/applied") { bearer(car.token) }.andExpect {
+            status { isOk() }
+            jsonPath("$.ambientLight.brightness") { value(60) }
+            jsonPath("$.greeting") { value("엄마님, 출근 설정을 적용했어요") }
         }
+        // 이 차 멤버가 아닌 사람의 프로필은 적용할 수 없다.
+        mockMvc.post("/vehicle-api/v1/me/profiles/$outsider/applied") { bearer(car.token) }
+            .andExpect { status { isNotFound() } }
     }
 
     @Test

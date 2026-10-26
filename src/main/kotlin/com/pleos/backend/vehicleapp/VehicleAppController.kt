@@ -1,12 +1,14 @@
 package com.pleos.backend.vehicleapp
 
 import com.pleos.backend.auth.AuthVehicle
+import com.pleos.backend.common.notFound
+import com.pleos.backend.profile.ApplicableProfileDto
 import com.pleos.backend.profile.ProfileRepository
-import com.pleos.backend.profile.ProfileResponse
-import com.pleos.backend.profile.toResponse
+import com.pleos.backend.profile.toApplicable
 import com.pleos.backend.reservation.NextDriverResponse
-import com.pleos.backend.reservation.ReservationResponse
 import com.pleos.backend.reservation.ReservationService
+import com.pleos.backend.theme.WelcomeResponse
+import com.pleos.backend.theme.WelcomeService
 import com.pleos.backend.user.UserRepository
 import com.pleos.backend.vehicle.VehicleRegisterRequest
 import com.pleos.backend.vehicle.VehicleRegisterResponse
@@ -29,11 +31,11 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
-/** 시동 직후 1탭 선택 화면용. 예약이 없거나 자동 실행이 막힐 때의 대체안. */
+/** 1탭 선택 화면용. 예약이 없을 때의 대체안. 테마는 적용 보고 후에 받는다. */
 data class DriverProfilesResponse(
     val userId: UUID,
     val nickname: String,
-    val profiles: List<ProfileResponse>,
+    val profiles: List<ApplicableProfileDto>,
 )
 
 @Service
@@ -42,20 +44,32 @@ class VehicleAppService(
     private val vehicles: VehicleService,
     private val users: UserRepository,
     private val profiles: ProfileRepository,
+    private val welcome: WelcomeService,
 ) {
     fun driverProfiles(vehicleId: UUID): List<DriverProfilesResponse> {
         val userIds = vehicles.memberUserIds(vehicleId)
         val nicknames = users.findAllById(userIds).associate { it.requireId() to it.nickname }
         val byOwner = profiles.findAllByOwnerIdInOrderByCreatedAtAsc(userIds).groupBy { it.ownerId }
         return userIds.map { id ->
-            DriverProfilesResponse(id, nicknames[id].orEmpty(), byOwner[id].orEmpty().map { it.toResponse() })
+            DriverProfilesResponse(id, nicknames[id].orEmpty(), byOwner[id].orEmpty().map { it.toApplicable() })
         }
+    }
+
+    /** 1탭으로 고른 프로필의 차량 설정을 적용한 뒤 호출한다. 이 차량 멤버의 프로필만 허용. */
+    fun welcomeForSelected(vehicleId: UUID, profileId: UUID): WelcomeResponse {
+        val profile = profiles.findById(profileId).orElse(null)
+            ?.takeIf { it.ownerId in vehicles.memberUserIds(vehicleId) }
+            ?: throw notFound("프로필을 찾을 수 없습니다: $profileId")
+        val nickname = users.findById(profile.ownerId).map { it.nickname }.orElse("")
+        return welcome.build(profile, nickname)
     }
 }
 
 /**
  * 차량 앱(Pleos Connect) 전용 API. 등록을 뺀 모든 요청은 차량 토큰이 필요하다.
- * 흐름: 첫 실행 → 등록·코드 표시 / 시동 → next-driver 조회 → SDK 적용 → applied 보고
+ * 흐름: 첫 실행 → 등록·코드 표시
+ *       탑승 → next-driver 조회 → 차량 설정 적용 → applied 보고 → 응답의 테마·조명·사운드 적용
+ *       예약 없음(204) → 프로필 목록에서 1탭 선택 → 차량 설정 적용 → 선택 프로필 applied 보고 → 테마 적용
  */
 @Tag(name = "차량 앱")
 @RestController
@@ -76,17 +90,28 @@ class VehicleAppController(
     @GetMapping("/me")
     fun me(vehicle: AuthVehicle): VehicleSelfResponse = vehicles.self(vehicle.id)
 
-    @Operation(summary = "멤버별 프로필 목록", description = "시동 직후 1탭 선택 화면용.")
+    @Operation(summary = "멤버별 프로필 목록", description = "1탭 선택 화면용. 차량 설정만 들어 있고 테마는 적용 보고 후에 받는다.")
     @GetMapping("/me/profiles")
     fun driverProfiles(vehicle: AuthVehicle): List<DriverProfilesResponse> = service.driverProfiles(vehicle.id)
 
-    @Operation(summary = "다음 운전자 조회", description = "시동(IGNITION_STATE) 감지 시 호출. 예약이 없으면 204.")
+    @Operation(summary = "다음 운전자 조회", description = "앱이 열리거나 탑승을 감지했을 때 호출. 차량 설정만 내려준다. 예약이 없으면 204.")
     @GetMapping("/me/next-driver")
     fun nextDriver(vehicle: AuthVehicle): ResponseEntity<NextDriverResponse> =
         reservations.nextForVehicle(vehicle.id)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
 
-    @Operation(summary = "적용 완료 보고", description = "SDK 적용 후 호출. 재시도해도 안전하다.")
+    @Operation(
+        summary = "예약 프로필 적용 완료 보고",
+        description = "차량 설정을 SDK로 적용한 뒤 호출. 응답의 테마·조명·웰컴 사운드를 이어서 적용한다. 재시도해도 같은 응답.",
+    )
     @PostMapping("/me/next-driver/{reservationId}/applied")
-    fun applied(vehicle: AuthVehicle, @PathVariable reservationId: UUID): ReservationResponse =
+    fun applied(vehicle: AuthVehicle, @PathVariable reservationId: UUID): WelcomeResponse =
         reservations.markApplied(vehicle.id, reservationId)
+
+    @Operation(
+        summary = "선택 프로필 적용 완료 보고",
+        description = "1탭으로 고른 프로필의 차량 설정을 적용한 뒤 호출. 응답의 테마·조명·웰컴 사운드를 이어서 적용한다.",
+    )
+    @PostMapping("/me/profiles/{profileId}/applied")
+    fun appliedSelected(vehicle: AuthVehicle, @PathVariable profileId: UUID): WelcomeResponse =
+        service.welcomeForSelected(vehicle.id, profileId)
 }

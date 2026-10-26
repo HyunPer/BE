@@ -1,8 +1,10 @@
 package com.pleos.backend
 
 import com.jayway.jsonpath.JsonPath
+import com.pleos.backend.asset.AssetRepository
 import com.pleos.backend.profile.ProfileRepository
 import com.pleos.backend.reservation.ReservationRepository
+import com.pleos.backend.theme.ThemeRepository
 import com.pleos.backend.user.UserRepository
 import com.pleos.backend.vehicle.VehicleMemberRepository
 import com.pleos.backend.vehicle.VehicleRepository
@@ -26,6 +28,8 @@ abstract class ApiTestSupport {
     @Autowired lateinit var vehicles: VehicleRepository
     @Autowired lateinit var members: VehicleMemberRepository
     @Autowired lateinit var reservations: ReservationRepository
+    @Autowired lateinit var themes: ThemeRepository
+    @Autowired lateinit var assets: AssetRepository
 
     @BeforeEach
     fun cleanDatabase() {
@@ -33,6 +37,8 @@ abstract class ApiTestSupport {
         members.deleteAll()
         vehicles.deleteAll()
         profiles.deleteAll()
+        themes.deleteAll()
+        assets.deleteAll()
         users.deleteAll()
     }
 
@@ -43,9 +49,12 @@ abstract class ApiTestSupport {
         postJson("/api/v1/users", """{"nickname":"$nickname"}""").read("$.accessToken")
 
     fun registerVehicle(model: String = "IONIQ 5"): RegisteredVehicle {
-        val json = postJson("/vehicle-api/v1/vehicles","""{"model":"$model"}""")
+        val json = postJson("/vehicle-api/v1/vehicles", """{"model":"$model"}""")
         return RegisteredVehicle(json.read("$.vehicleId"), json.read("$.vehicleToken"), json.read("$.pairingCode"))
     }
+
+    fun createTheme(token: String, body: String): String =
+        postJson("/api/v1/themes", body, token).read("$.id")
 
     fun createProfile(token: String, body: String): String =
         postJson("/api/v1/profiles", body, token).read("$.id")

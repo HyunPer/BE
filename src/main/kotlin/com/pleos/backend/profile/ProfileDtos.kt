@@ -6,12 +6,9 @@ import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.util.UUID
-
-private const val HEX_COLOR = "^#[0-9A-Fa-f]{6}$"
 
 // 값 범위는 임시 기준이다. Vehicle SDK 검증 후 차종 프로파일에 맞춰 조정한다.
 
@@ -35,6 +32,9 @@ data class ProfileRequest(
 
     @field:Size(max = 100)
     val welcomeSoundId: String? = null,
+
+    /** 내 테마 ID(/api/v1/themes). 없으면 기본 테마. */
+    val themeId: UUID? = null,
 )
 
 data class ProfileResponse(
@@ -45,17 +45,12 @@ data class ProfileResponse(
     val climate: ClimateDto,
     val light: LightDto,
     val welcomeSoundId: String?,
+    val themeId: UUID?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
 
 data class DisplayDto(
-    @field:Pattern(regexp = HEX_COLOR)
-    val themeColor: String = "#1E88E5",
-
-    @field:Size(max = 100)
-    val wallpaperId: String? = null,
-
     @field:Size(max = 12)
     val widgets: List<@NotBlank @Size(max = 50) String> = emptyList(),
 )
@@ -81,10 +76,8 @@ data class ClimateDto(
     val fanSpeed: Int = 3,
 )
 
+/** 앰비언트 밝기. 색은 테마의 ambientColor. */
 data class LightDto(
-    @field:Pattern(regexp = HEX_COLOR)
-    val color: String = "#FFFFFF",
-
     @field:Min(0) @field:Max(100)
     val brightness: Int = 50,
 )
@@ -92,21 +85,43 @@ data class LightDto(
 fun Profile.toResponse() = ProfileResponse(
     id = requireId(),
     name = name,
-    display = DisplayDto(display.themeColor, display.wallpaperId, display.widgets.toList()),
+    display = DisplayDto(display.widgets.toList()),
     seat = SeatDto(seat.reclineAngle, seat.slidePosition, seat.heatingLevel, seat.steeringWheelHeating),
     climate = ClimateDto(climate.temperature, climate.fanSpeed),
-    light = LightDto(light.color, light.brightness),
+    light = LightDto(light.brightness),
     welcomeSoundId = welcomeSoundId,
+    themeId = themeId,
     createdAt = createdAt,
     updatedAt = updatedAt,
 )
+
+// ── 차량 앱 적용 단계 ──
+// 1단계 차량 설정(시트·공조·열선)을 먼저 적용하고 보고하면, 2단계 웰컴 묶음(theme.WelcomeResponse)을 받는다.
+
+/** 1단계: Vehicle SDK로 바로 적용하는 차량 설정. 테마·조명은 들어 있지 않다. */
+data class VehicleSettingsDto(
+    val seat: SeatDto,
+    val climate: ClimateDto,
+)
+
+/** 차량 앱의 프로필 선택 목록에 쓰는 요약. 테마는 적용 보고 후에 받는다. */
+data class ApplicableProfileDto(
+    val profileId: UUID,
+    val name: String,
+    val vehicleSettings: VehicleSettingsDto,
+)
+
+fun Profile.toVehicleSettings() = VehicleSettingsDto(
+    seat = SeatDto(seat.reclineAngle, seat.slidePosition, seat.heatingLevel, seat.steeringWheelHeating),
+    climate = ClimateDto(climate.temperature, climate.fanSpeed),
+)
+
+fun Profile.toApplicable() = ApplicableProfileDto(requireId(), name, toVehicleSettings())
 
 fun ProfileRequest.toEntity(ownerId: UUID) = Profile(ownerId = ownerId, name = name.trim()).also { it.applyFrom(this) }
 
 fun Profile.applyFrom(request: ProfileRequest) {
     name = request.name.trim()
-    display.themeColor = request.display.themeColor.uppercase()
-    display.wallpaperId = request.display.wallpaperId
     display.widgets.clear()
     display.widgets.addAll(request.display.widgets)
     seat.reclineAngle = request.seat.reclineAngle
@@ -115,7 +130,7 @@ fun Profile.applyFrom(request: ProfileRequest) {
     seat.steeringWheelHeating = request.seat.steeringWheelHeating
     climate.temperature = request.climate.temperature
     climate.fanSpeed = request.climate.fanSpeed
-    light.color = request.light.color.uppercase()
     light.brightness = request.light.brightness
     welcomeSoundId = request.welcomeSoundId
+    themeId = request.themeId
 }

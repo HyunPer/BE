@@ -33,8 +33,8 @@ class ProfileApiTest : ApiTestSupport() {
             status { isCreated() }
             header { string("Location", containsString("/api/v1/profiles/")) }
             jsonPath("$.name") { value("출근") }
-            jsonPath("$.display.themeColor") { value("#1E88E5") }
             jsonPath("$.display.widgets") { isEmpty() }
+            jsonPath("$.themeId") { doesNotExist() }
             jsonPath("$.seat.reclineAngle") { value(100) }
             jsonPath("$.climate.temperature") { value(22.0) }
             jsonPath("$.light.brightness") { value(50) }
@@ -53,10 +53,10 @@ class ProfileApiTest : ApiTestSupport() {
             """
             {
               "name": "대학생 자녀",
-              "display": {"themeColor": "#ff5722", "wallpaperId": "night-city", "widgets": ["music", "weather", "battery"]},
+              "display": {"widgets": ["music", "weather", "battery"]},
               "seat": {"reclineAngle": 110, "slidePosition": 70, "heatingLevel": 2, "steeringWheelHeating": true},
               "climate": {"temperature": 20.5, "fanSpeed": 5},
-              "light": {"color": "#7c4dff", "brightness": 80},
+              "light": {"brightness": 80},
               "welcomeSoundId": "chime-01"
             }
             """.trimIndent(),
@@ -64,12 +64,11 @@ class ProfileApiTest : ApiTestSupport() {
 
         mockMvc.get("/api/v1/profiles/$id") { bearer(token) }.andExpect {
             status { isOk() }
-            jsonPath("$.display.themeColor") { value("#FF5722") }
             jsonPath("$.display.widgets[0]") { value("music") }
             jsonPath("$.display.widgets[2]") { value("battery") }
             jsonPath("$.seat.steeringWheelHeating") { value(true) }
             jsonPath("$.climate.temperature") { value(20.5) }
-            jsonPath("$.light.color") { value("#7C4DFF") }
+            jsonPath("$.light.brightness") { value(80) }
             jsonPath("$.welcomeSoundId") { value("chime-01") }
         }
     }
@@ -155,7 +154,7 @@ class ProfileApiTest : ApiTestSupport() {
         listOf(
             """{"name":"a","climate":{"temperature":40.0}}""",
             """{"name":"a","seat":{"heatingLevel":5}}""",
-            """{"name":"a","light":{"color":"red"}}""",
+            """{"name":"a","light":{"brightness":150}}""",
             """{"name":"a","display":{"widgets":[""]}}""",
         ).forEach { body ->
             val status = mockMvc.post("/api/v1/profiles") {

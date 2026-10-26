@@ -21,4 +21,9 @@ object Tokens {
 
     /** 차량 화면에 띄우는 6자리 숫자 코드. */
     fun pairingCode(): String = "%06d".format(random.nextInt(1_000_000))
+
+    /** 테마 공유 코드. 헷갈리는 글자(0·O·1·I)를 뺀 8자리. */
+    fun shareCode(): String = String(CharArray(8) { SHARE_ALPHABET[random.nextInt(SHARE_ALPHABET.length)] })
+
+    private const val SHARE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 }

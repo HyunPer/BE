@@ -62,6 +62,19 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | PUT | `/vehicles/{vehicleId}/next-driver` | 다음 운전자 예약 `{profileId}` | 200 |
 | GET | `/vehicles/{vehicleId}/next-driver` | 현재 대기 예약 (없으면 204) | 200/204 |
 | DELETE | `/vehicles/{vehicleId}/next-driver` | 대기 예약 취소 | 204 |
+| POST | `/assets` | 테마 이미지 업로드 (multipart `file`, PNG·JPEG·WEBP, 3MB 이하, GIF 불가) | 201 |
+| GET | `/themes` | 내 테마 목록 (직접 만든 것 + 공유받은 것) | 200 |
+| GET | `/themes/{id}` | 테마 조회 | 200 |
+| POST | `/themes` | 테마 생성 (글자 대비 부족하면 400) | 201 |
+| PUT | `/themes/{id}` | 테마 전체 교체 | 200 |
+| DELETE | `/themes/{id}` | 테마 삭제 (쓰던 프로필은 기본 테마로) | 204 |
+| POST | `/themes/{id}/share` | 공유 시작 → 8자리 공유 코드 (공유받은 테마는 409) | 200 |
+| DELETE | `/themes/{id}/share` | 공유 중지 | 204 |
+| GET | `/themes/shared/{shareCode}` | 공유 코드 미리보기 | 200 |
+| POST | `/themes/import` | 공유 코드로 받기 `{shareCode}` → 내 테마로 복사 | 201 |
+| GET | `/themes/market` | 테마 마켓 (공유 중, 많이 받은 순 50개) | 200 |
+
+이미지는 `GET /files/{id}`로 토큰 없이 내려받습니다(경로는 `/api/v1` 밖). 추측할 수 없는 UUID 주소이고 내용이 바뀌지 않아 1년 캐시합니다.
 
 ### 차량 앱
 
@@ -69,9 +82,12 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | --- | --- | --- | --- |
 | POST | `/vehicles` | 차량 등록 (첫 실행 1회, 토큰 불필요) | 201 |
 | GET | `/me` | 내 차량 정보 (페어링 코드·멤버 수) | 200 |
-| GET | `/me/profiles` | 멤버별 프로필 (시동 직후 1탭 선택 화면용) | 200 |
-| GET | `/me/next-driver` | 시동 시 다음 운전자 + 적용할 프로필 (없으면 204) | 200/204 |
-| POST | `/me/next-driver/{reservationId}/applied` | 적용 완료 보고 (재시도 안전, 취소된 예약은 409) | 200 |
+| GET | `/me/profiles` | 멤버별 프로필, 차량 설정만 (1탭 선택 화면용) | 200 |
+| GET | `/me/next-driver` | 1단계: 다음 운전자 + 차량 설정 (없으면 204) | 200/204 |
+| POST | `/me/next-driver/{reservationId}/applied` | 적용 완료 보고 → 2단계 웰컴 묶음(테마·조명·사운드·인사말). 재시도 안전, 취소된 예약은 409 | 200 |
+| POST | `/me/profiles/{profileId}/applied` | 1탭으로 고른 프로필 적용 완료 보고 → 2단계 웰컴 묶음 | 200 |
+
+차량 앱은 **차량 설정(시트·공조·열선)을 먼저 적용하고 보고한 뒤**, 응답으로 받은 테마·앰비언트 라이트·웰컴 사운드를 적용합니다. 테마가 먼저 바뀌지 않도록 응답을 두 단계로 나눴습니다.
 
 ### 공통 규칙
 
@@ -89,13 +105,16 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 ```json
 {
   "name": "대학생 자녀",
-  "display": { "themeColor": "#FF5722", "wallpaperId": "night-city", "widgets": ["music", "weather", "battery"] },
+  "themeId": "3f0c…",
+  "display": { "widgets": ["music", "weather", "battery"] },
   "seat": { "reclineAngle": 110, "slidePosition": 70, "heatingLevel": 2, "steeringWheelHeating": true },
   "climate": { "temperature": 20.5, "fanSpeed": 5 },
-  "light": { "color": "#7C4DFF", "brightness": 80 },
+  "light": { "brightness": 80 },
   "welcomeSoundId": "chime-01"
 }
 ```
+
+색·배경·캐릭터·버튼 모양·앰비언트 색은 프로필이 아니라 **테마**에 있습니다. 프로필은 `themeId`로 테마를 가리킵니다.
 
 ### 필드와 허용 범위
 
@@ -104,18 +123,36 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | 필드 | 기본값 | 허용 범위 | 대응 SDK |
 | --- | --- | --- | --- |
 | `name` | 필수 | 공백 불가, 20자 이하 | — |
-| `display.themeColor` | `#1E88E5` | `#RRGGBB` | 앱 내 커스텀 홈 |
-| `display.wallpaperId` | 없음 | 100자 이하 | 앱 내 커스텀 홈 |
-| `display.widgets` | `[]` | 최대 12개, 순서 유지 | 앱 내 커스텀 홈 |
+| `themeId` | 없음(기본 테마) | 내 테마 ID | 차량 앱 화면 |
+| `display.widgets` | `[]` | 최대 12개, 순서 유지 | 차량 앱 홈 |
 | `seat.reclineAngle` | 100 | 80–150 | Seat |
 | `seat.slidePosition` | 50 | 0–100 | Seat |
 | `seat.heatingLevel` | 0 | 0–3 | Seat |
 | `seat.steeringWheelHeating` | false | true/false | Steeringwheel |
 | `climate.temperature` | 22.0 | 16.0–32.0 | HVAC |
 | `climate.fanSpeed` | 3 | 0–8 | HVAC |
-| `light.color` | `#FFFFFF` | `#RRGGBB` | Light (제어 가능 여부 미확정) |
-| `light.brightness` | 50 | 0–100 | Light |
-| `welcomeSoundId` | 없음 | 100자 이하 | 시동 감지 후 앱이 재생 |
+| `light.brightness` | 50 | 0–100 | Light (색은 테마의 `ambientColor`) |
+| `welcomeSoundId` | 없음 | 100자 이하 | 차량 설정 적용 후 앱이 재생 |
+
+## 테마 설정값
+
+카카오톡 테마처럼 **차량 앱 화면 안**의 겉모습을 바꿉니다. 차량 런처·계기판은 OS 영역이라 바꿀 수 없습니다.
+
+| 필드 | 기본값 | 값 |
+| --- | --- | --- |
+| `name` | 필수 | 20자 이하 |
+| `colors.background` / `surface` / `primary` / `onPrimary` / `text` | `#121212` / `#1E1E1E` / `#1E88E5` / `#FFFFFF` / `#FFFFFF` | `#RRGGBB` |
+| `backgroundAssetId` | 없음 | 업로드한 이미지 ID |
+| `characterAssetId` | 없음 | 업로드한 이미지 ID |
+| `characterPlacement` | `BOTTOM_RIGHT` | `BOTTOM_RIGHT` `BOTTOM_LEFT` `TOP_RIGHT` `WELCOME_ONLY` |
+| `buttonStyle` | `ROUNDED` | `ROUNDED` `PILL` `SQUARE` `OUTLINED` |
+| `widgetStyle` | `FILLED` | `FILLED` `OUTLINED` `GLASS`(배경 위 반투명) |
+| `fontStyle` | `DEFAULT` | `DEFAULT` `ROUNDED` `BOLD` |
+| `ambientColor` | `#FFFFFF` | `#RRGGBB`, 실내 앰비언트 라이트 색 |
+
+- **운전 중 가독성 검사**: 글자/배경·카드 4.5:1, 버튼 글자/버튼 3:1 이상이 아니면 400입니다(WCAG 명도 대비).
+- 스타일 값(`buttonStyle` 등)은 차량 앱이 화면을 그리는 규격입니다. 값을 늘리면 차량 앱도 같이 대응해야 합니다.
+- 공유받은 테마는 내 소유로 복사됩니다. 원작자의 이미지는 그대로 쓸 수 있지만, 다시 공유할 수는 없습니다.
 
 ## 구조
 
@@ -127,13 +164,14 @@ src/main/kotlin/com/pleos/backend
 ├── profile/       # 프로필 엔티티·DTO·서비스·컨트롤러
 ├── vehicle/       # 차량, 멤버(OWNER/MEMBER), 페어링
 ├── reservation/   # 다음 운전자 예약 (폰 앱 쪽 API)
-└── vehicleapp/    # 차량 앱 전용 API
+├── vehicleapp/    # 차량 앱 전용 API
+├── theme/         # 테마(색·배경·캐릭터·버튼/위젯 모양), 공유·마켓, 웰컴 묶음 조립
+└── asset/         # 테마 이미지 업로드·내려받기
 ```
 
 ## 다음 작업 후보
 
 단계별 계획은 [docs/DESIGN.md](docs/DESIGN.md#6-단계별-로드맵)에 있습니다.
 
-- 테마 공유 링크 (프로필 → 공유 코드 → 복사)
 - 멤버 관리(내보내기·나가기), 페어링 코드 재발급
 - 운영 DB(PostgreSQL + Flyway) 전환과 배포
