@@ -5,6 +5,7 @@ import com.pleos.backend.common.notFound
 import com.pleos.backend.profile.Profile
 import com.pleos.backend.profile.ProfileRepository
 import com.pleos.backend.profile.VehicleSettingsDto
+import com.pleos.backend.profile.SeatPositionService
 import com.pleos.backend.profile.toVehicleSettings
 import com.pleos.backend.theme.WelcomeResponse
 import com.pleos.backend.theme.WelcomeService
@@ -56,6 +57,7 @@ class ReservationService(
     private val profiles: ProfileRepository,
     private val users: UserRepository,
     private val welcome: WelcomeService,
+    private val seatPositions: SeatPositionService,
 ) {
 
     // ── 폰 앱 ──
@@ -92,7 +94,7 @@ class ReservationService(
                 driverNickname = nicknameOf(reservation.userId),
                 profileId = profile.requireId(),
                 profileName = profile.name,
-                vehicleSettings = profile.toVehicleSettings(),
+                vehicleSettings = profile.toVehicleSettings(seatPositions.find(profile.requireId(), vehicleId)),
             )
         }
 

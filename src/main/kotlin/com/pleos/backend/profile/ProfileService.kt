@@ -26,6 +26,7 @@ interface ProfileRepository : JpaRepository<Profile, UUID> {
 class ProfileService(
     private val repository: ProfileRepository,
     private val themes: ThemeRepository,
+    private val seatPositions: SeatPositionRepository,
 ) {
 
     fun findAll(ownerId: UUID): List<ProfileResponse> =
@@ -49,7 +50,9 @@ class ProfileService(
 
     @Transactional
     fun delete(ownerId: UUID, id: UUID) {
-        repository.delete(load(ownerId, id))
+        val profile = load(ownerId, id)
+        seatPositions.deleteAllByProfileId(id)
+        repository.delete(profile)
     }
 
     /** 내 테마(직접 만들었거나 공유받아 복사한 것)만 연결할 수 있다. */

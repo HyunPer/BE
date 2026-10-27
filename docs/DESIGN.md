@@ -36,12 +36,15 @@ erDiagram
   THEME |o--o{ THEME : "imported from"
   USER ||--o{ ASSET : uploads
   ASSET |o--o{ THEME : "background / character"
+  PROFILE ||--o{ SEAT_POSITION : "per vehicle"
+  VEHICLE ||--o{ SEAT_POSITION : has
 ```
 
 | 테이블 | 주요 컬럼 | 비고 |
 | --- | --- | --- |
 | `users` | nickname, token_hash | 비밀번호 없음. 토큰은 SHA-256 해시만 저장 |
-| `profiles` | owner_id, name, theme_id, widgets, seat·climate, light_brightness, welcome_sound | 사용자당 개수 무제한 |
+| `profiles` | owner_id, name, theme_id, widgets, 시트 열선·통풍·핸들 열선, climate, light_brightness, welcome_sound | 사용자당 개수 무제한 |
+| `seat_positions` | profile_id, vehicle_id, memory_slot, backrest_position, fore_aft_position | (profile, vehicle) 유일. 차종마다 범위가 달라 차량별 저장 |
 | `themes` | owner_id, name, color_*, background/character_asset_id, button/widget/font_style, ambient_color, share_code, source_theme_id, import_count | 공유 코드는 공유 중일 때만 |
 | `assets` | owner_id, content_type, size_bytes | 파일 본문은 `pleos.files.dir` 디스크에. 바뀌지 않음 |
 | `vehicles` | model, token_hash, pairing_code(6자리), nickname | 차량 앱이 스스로 등록 |
@@ -153,4 +156,4 @@ sequenceDiagram
 | 4 | 멤버 내보내기·나가기, 페어링 코드 재발급 | 예정 |
 | 5 | 원격 사전 공조: 한국에 제3자 공개 API 없음(조사 결과) → "출발 예약 공조"(탑승 시 즉시 적용)로 대체 | 대체 |
 | 6 | PostgreSQL + Flyway, 이미지 오브젝트 스토리지, 배포 (데모 영상 촬영 전) | 예정 |
-| 7 | 시트 위치 모델 변경 (절대값 → 시트 메모리 슬롯 / 목표값+폐루프, 조사 보고서 참고) | 예정 |
+| 7 | 시트 위치 모델 변경: 절대값 제거 → 프로필×차량별 메모리 슬롯 / 차량 단위 위치, "지금 자세 저장", 시트 통풍 추가 | 완료 |

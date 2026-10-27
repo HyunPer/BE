@@ -4,6 +4,9 @@ import com.pleos.backend.auth.AuthVehicle
 import com.pleos.backend.common.notFound
 import com.pleos.backend.profile.ApplicableProfileDto
 import com.pleos.backend.profile.ProfileRepository
+import com.pleos.backend.profile.SeatPositionDto
+import com.pleos.backend.profile.SeatPositionRequest
+import com.pleos.backend.profile.SeatPositionService
 import com.pleos.backend.profile.toApplicable
 import com.pleos.backend.reservation.NextDriverResponse
 import com.pleos.backend.reservation.ReservationService
@@ -25,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -45,13 +49,16 @@ class VehicleAppService(
     private val users: UserRepository,
     private val profiles: ProfileRepository,
     private val welcome: WelcomeService,
+    private val seatPositions: SeatPositionService,
 ) {
     fun driverProfiles(vehicleId: UUID): List<DriverProfilesResponse> {
         val userIds = vehicles.memberUserIds(vehicleId)
         val nicknames = users.findAllById(userIds).associate { it.requireId() to it.nickname }
-        val byOwner = profiles.findAllByOwnerIdInOrderByCreatedAtAsc(userIds).groupBy { it.ownerId }
+        val all = profiles.findAllByOwnerIdInOrderByCreatedAtAsc(userIds)
+        val seats = seatPositions.findForVehicle(vehicleId, all.map { it.requireId() })
+        val byOwner = all.groupBy { it.ownerId }
         return userIds.map { id ->
-            DriverProfilesResponse(id, nicknames[id].orEmpty(), byOwner[id].orEmpty().map { it.toApplicable() })
+            DriverProfilesResponse(id, nicknames[id].orEmpty(), byOwner[id].orEmpty().map { it.toApplicable(seats[it.requireId()]) })
         }
     }
 
@@ -78,6 +85,7 @@ class VehicleAppController(
     private val vehicles: VehicleService,
     private val reservations: ReservationService,
     private val service: VehicleAppService,
+    private val seatPositions: SeatPositionService,
 ) {
 
     @Operation(summary = "차량 등록", description = "차량 앱 첫 실행 때 한 번. vehicleToken을 저장하고 pairingCode를 화면에 띄운다.")
@@ -114,4 +122,15 @@ class VehicleAppController(
     @PostMapping("/me/profiles/{profileId}/applied")
     fun appliedSelected(vehicle: AuthVehicle, @PathVariable profileId: UUID): WelcomeResponse =
         service.welcomeForSelected(vehicle.id, profileId)
+
+    @Operation(
+        summary = "지금 자세 저장",
+        description = "차 안에서 시트를 맞춘 뒤 호출. 차량 앱이 SDK로 읽은 현재 위치(차량 단위)와 메모리 슬롯을 이 차량 기준으로 저장한다.",
+    )
+    @PutMapping("/me/profiles/{profileId}/seat-position")
+    fun saveSeatPosition(
+        vehicle: AuthVehicle,
+        @PathVariable profileId: UUID,
+        @Valid @RequestBody request: SeatPositionRequest,
+    ): SeatPositionDto = seatPositions.saveFromVehicle(vehicle.id, profileId, request)
 }

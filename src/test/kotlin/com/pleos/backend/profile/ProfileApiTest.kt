@@ -35,7 +35,8 @@ class ProfileApiTest : ApiTestSupport() {
             jsonPath("$.name") { value("출근") }
             jsonPath("$.display.widgets") { isEmpty() }
             jsonPath("$.themeId") { doesNotExist() }
-            jsonPath("$.seat.reclineAngle") { value(100) }
+            jsonPath("$.seat.heatingLevel") { value(0) }
+            jsonPath("$.seat.ventilationLevel") { value(0) }
             jsonPath("$.climate.temperature") { value(22.0) }
             jsonPath("$.light.brightness") { value(50) }
             jsonPath("$.welcomeSoundId") { doesNotExist() }
@@ -54,7 +55,7 @@ class ProfileApiTest : ApiTestSupport() {
             {
               "name": "대학생 자녀",
               "display": {"widgets": ["music", "weather", "battery"]},
-              "seat": {"reclineAngle": 110, "slidePosition": 70, "heatingLevel": 2, "steeringWheelHeating": true},
+              "seat": {"heatingLevel": 2, "ventilationLevel": 1, "steeringWheelHeating": true},
               "climate": {"temperature": 20.5, "fanSpeed": 5},
               "light": {"brightness": 80},
               "welcomeSoundId": "chime-01"
@@ -67,6 +68,7 @@ class ProfileApiTest : ApiTestSupport() {
             jsonPath("$.display.widgets[0]") { value("music") }
             jsonPath("$.display.widgets[2]") { value("battery") }
             jsonPath("$.seat.steeringWheelHeating") { value(true) }
+            jsonPath("$.seat.ventilationLevel") { value(1) }
             jsonPath("$.climate.temperature") { value(20.5) }
             jsonPath("$.light.brightness") { value(80) }
             jsonPath("$.welcomeSoundId") { value("chime-01") }
@@ -154,6 +156,7 @@ class ProfileApiTest : ApiTestSupport() {
         listOf(
             """{"name":"a","climate":{"temperature":40.0}}""",
             """{"name":"a","seat":{"heatingLevel":5}}""",
+            """{"name":"a","seat":{"ventilationLevel":4}}""",
             """{"name":"a","light":{"brightness":150}}""",
             """{"name":"a","display":{"widgets":[""]}}""",
         ).forEach { body ->

@@ -57,17 +57,17 @@ class DisplaySettings(
     var widgets: MutableList<String> = mutableListOf(),
 )
 
-/** Vehicle SDK Seat · Steeringwheel. 지원 범위는 차종별로 다르다. */
+/**
+ * 차종과 무관한 시트 설정: 열선·통풍 단계, 핸들 열선 (Vehicle SDK HVAC 도메인).
+ * 시트 위치는 차량마다 범위·단위가 달라 프로필×차량별 SeatPosition에 따로 둔다.
+ */
 @Embeddable
 class SeatSettings(
-    @Column(name = "seat_recline_angle", nullable = false)
-    var reclineAngle: Int = 100,
-
-    @Column(name = "seat_slide_position", nullable = false)
-    var slidePosition: Int = 50,
-
     @Column(name = "seat_heating_level", nullable = false)
     var heatingLevel: Int = 0,
+
+    @Column(name = "seat_ventilation_level", nullable = false)
+    var ventilationLevel: Int = 0,
 
     @Column(name = "steering_wheel_heating", nullable = false)
     var steeringWheelHeating: Boolean = false,

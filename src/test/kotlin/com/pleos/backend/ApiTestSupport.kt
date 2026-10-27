@@ -3,6 +3,7 @@ package com.pleos.backend
 import com.jayway.jsonpath.JsonPath
 import com.pleos.backend.asset.AssetRepository
 import com.pleos.backend.profile.ProfileRepository
+import com.pleos.backend.profile.SeatPositionRepository
 import com.pleos.backend.reservation.ReservationRepository
 import com.pleos.backend.theme.ThemeRepository
 import com.pleos.backend.user.UserRepository
@@ -30,11 +31,13 @@ abstract class ApiTestSupport {
     @Autowired lateinit var reservations: ReservationRepository
     @Autowired lateinit var themes: ThemeRepository
     @Autowired lateinit var assets: AssetRepository
+    @Autowired lateinit var seatPositions: SeatPositionRepository
 
     @BeforeEach
     fun cleanDatabase() {
         reservations.deleteAll()
         members.deleteAll()
+        seatPositions.deleteAll()
         vehicles.deleteAll()
         profiles.deleteAll()
         themes.deleteAll()

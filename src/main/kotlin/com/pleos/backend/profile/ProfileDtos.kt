@@ -55,15 +55,13 @@ data class DisplayDto(
     val widgets: List<@NotBlank @Size(max = 50) String> = emptyList(),
 )
 
+/** 시트 열선·통풍 단계와 핸들 열선. 시트 위치는 차량별 seat-positions API로 따로 저장한다. */
 data class SeatDto(
-    @field:Min(80) @field:Max(150)
-    val reclineAngle: Int = 100,
-
-    @field:Min(0) @field:Max(100)
-    val slidePosition: Int = 50,
-
     @field:Min(0) @field:Max(3)
     val heatingLevel: Int = 0,
+
+    @field:Min(0) @field:Max(3)
+    val ventilationLevel: Int = 0,
 
     val steeringWheelHeating: Boolean = false,
 )
@@ -86,7 +84,7 @@ fun Profile.toResponse() = ProfileResponse(
     id = requireId(),
     name = name,
     display = DisplayDto(display.widgets.toList()),
-    seat = SeatDto(seat.reclineAngle, seat.slidePosition, seat.heatingLevel, seat.steeringWheelHeating),
+    seat = seat.toDto(),
     climate = ClimateDto(climate.temperature, climate.fanSpeed),
     light = LightDto(light.brightness),
     welcomeSoundId = welcomeSoundId,
@@ -98,10 +96,14 @@ fun Profile.toResponse() = ProfileResponse(
 // ── 차량 앱 적용 단계 ──
 // 1단계 차량 설정(시트·공조·열선)을 먼저 적용하고 보고하면, 2단계 웰컴 묶음(theme.WelcomeResponse)을 받는다.
 
-/** 1단계: Vehicle SDK로 바로 적용하는 차량 설정. 테마·조명은 들어 있지 않다. */
+/**
+ * 1단계: Vehicle SDK로 바로 적용하는 차량 설정. 테마·조명은 들어 있지 않다.
+ * seatPosition은 이 차량에 저장된 자세가 없으면 null이고, 그때 차량 앱은 시트를 움직이지 않는다.
+ */
 data class VehicleSettingsDto(
     val seat: SeatDto,
     val climate: ClimateDto,
+    val seatPosition: SeatPositionDto?,
 )
 
 /** 차량 앱의 프로필 선택 목록에 쓰는 요약. 테마는 적용 보고 후에 받는다. */
@@ -111,12 +113,15 @@ data class ApplicableProfileDto(
     val vehicleSettings: VehicleSettingsDto,
 )
 
-fun Profile.toVehicleSettings() = VehicleSettingsDto(
-    seat = SeatDto(seat.reclineAngle, seat.slidePosition, seat.heatingLevel, seat.steeringWheelHeating),
+fun SeatSettings.toDto() = SeatDto(heatingLevel, ventilationLevel, steeringWheelHeating)
+
+fun Profile.toVehicleSettings(seatPosition: SeatPosition?) = VehicleSettingsDto(
+    seat = seat.toDto(),
     climate = ClimateDto(climate.temperature, climate.fanSpeed),
+    seatPosition = seatPosition?.toDto(),
 )
 
-fun Profile.toApplicable() = ApplicableProfileDto(requireId(), name, toVehicleSettings())
+fun Profile.toApplicable(seatPosition: SeatPosition?) = ApplicableProfileDto(requireId(), name, toVehicleSettings(seatPosition))
 
 fun ProfileRequest.toEntity(ownerId: UUID) = Profile(ownerId = ownerId, name = name.trim()).also { it.applyFrom(this) }
 
@@ -124,9 +129,8 @@ fun Profile.applyFrom(request: ProfileRequest) {
     name = request.name.trim()
     display.widgets.clear()
     display.widgets.addAll(request.display.widgets)
-    seat.reclineAngle = request.seat.reclineAngle
-    seat.slidePosition = request.seat.slidePosition
     seat.heatingLevel = request.seat.heatingLevel
+    seat.ventilationLevel = request.seat.ventilationLevel
     seat.steeringWheelHeating = request.seat.steeringWheelHeating
     climate.temperature = request.climate.temperature
     climate.fanSpeed = request.climate.fanSpeed

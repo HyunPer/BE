@@ -56,6 +56,9 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | POST | `/profiles` | 프로필 생성 | 201 + `Location` |
 | PUT | `/profiles/{id}` | 프로필 전체 교체 | 200 |
 | DELETE | `/profiles/{id}` | 프로필 삭제 | 204 |
+| GET | `/profiles/{id}/seat-positions` | 차량별 시트 자세 목록 | 200 |
+| PUT | `/profiles/{id}/seat-positions/{vehicleId}` | 차량별 시트 자세 저장 (보통 메모리 슬롯만) | 200 |
+| DELETE | `/profiles/{id}/seat-positions/{vehicleId}` | 차량별 시트 자세 지우기 (그 차에서는 시트를 움직이지 않음) | 204 |
 | POST | `/vehicles/pair` | 차량 화면의 6자리 코드로 페어링 (첫 사람 OWNER) | 200 |
 | GET | `/vehicles` | 내 차량 목록 | 200 |
 | GET | `/vehicles/{vehicleId}` | 차량 상세 + 멤버 | 200 |
@@ -86,6 +89,7 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | GET | `/me/next-driver` | 1단계: 다음 운전자 + 차량 설정 (없으면 204) | 200/204 |
 | POST | `/me/next-driver/{reservationId}/applied` | 적용 완료 보고 → 2단계 웰컴 묶음(테마·조명·사운드·인사말). 재시도 안전, 취소된 예약은 409 | 200 |
 | POST | `/me/profiles/{profileId}/applied` | 1탭으로 고른 프로필 적용 완료 보고 → 2단계 웰컴 묶음 | 200 |
+| PUT | `/me/profiles/{profileId}/seat-position` | 지금 자세 저장: SDK로 읽은 현재 시트 위치·메모리 슬롯을 이 차량 기준으로 저장 | 200 |
 
 차량 앱은 **차량 설정(시트·공조·열선)을 먼저 적용하고 보고한 뒤**, 응답으로 받은 테마·앰비언트 라이트·웰컴 사운드를 적용합니다. 테마가 먼저 바뀌지 않도록 응답을 두 단계로 나눴습니다.
 
@@ -107,7 +111,7 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
   "name": "대학생 자녀",
   "themeId": "3f0c…",
   "display": { "widgets": ["music", "weather", "battery"] },
-  "seat": { "reclineAngle": 110, "slidePosition": 70, "heatingLevel": 2, "steeringWheelHeating": true },
+  "seat": { "heatingLevel": 2, "ventilationLevel": 1, "steeringWheelHeating": true },
   "climate": { "temperature": 20.5, "fanSpeed": 5 },
   "light": { "brightness": 80 },
   "welcomeSoundId": "chime-01"
@@ -115,6 +119,17 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 ```
 
 색·배경·캐릭터·버튼 모양·앰비언트 색은 프로필이 아니라 **테마**에 있습니다. 프로필은 `themeId`로 테마를 가리킵니다.
+
+### 시트 자세는 차량별로 따로
+
+Pleos Vehicle SDK는 시트를 절대 각도로 지정할 수 없고(`moveSeat*`는 FORWARD/STOP/BACKWARD), 위치값의 범위·단위도 차종마다 다릅니다. 그래서 시트 자세는 프로필이 아니라 **프로필 × 차량**별로 저장합니다.
+
+| 필드 | 의미 | 누가 채우나 |
+| --- | --- | --- |
+| `memorySlot` | 차량 시트 메모리 번호(`selectSeatMemory`), 1–10 임시 | 폰 앱에서 선택 |
+| `backrestPosition` · `foreAftPosition` | 차량 단위 그대로의 현재 위치 | 차량 앱 "지금 자세 저장" |
+
+차량 앱은 메모리 슬롯이 있으면 그것을 먼저 쓰고, 없으면 위치를 구독하며 목표에서 STOP을 보냅니다. 저장된 자세가 없으면 `vehicleSettings.seatPosition`이 null이고 시트를 움직이지 않습니다.
 
 ### 필드와 허용 범위
 
@@ -125,10 +140,9 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | `name` | 필수 | 공백 불가, 20자 이하 | — |
 | `themeId` | 없음(기본 테마) | 내 테마 ID | 차량 앱 화면 |
 | `display.widgets` | `[]` | 최대 12개, 순서 유지 | 차량 앱 홈 |
-| `seat.reclineAngle` | 100 | 80–150 | Seat |
-| `seat.slidePosition` | 50 | 0–100 | Seat |
-| `seat.heatingLevel` | 0 | 0–3 | Seat |
-| `seat.steeringWheelHeating` | false | true/false | Steeringwheel |
+| `seat.heatingLevel` | 0 | 0–3 | HVAC `setHvacSeatTemperature` |
+| `seat.ventilationLevel` | 0 | 0–3 | HVAC `setHvacSeatVentilation` |
+| `seat.steeringWheelHeating` | false | true/false | HVAC `setHvacSteeringWheelHeat` |
 | `climate.temperature` | 22.0 | 16.0–32.0 | HVAC |
 | `climate.fanSpeed` | 3 | 0–8 | HVAC |
 | `light.brightness` | 50 | 0–100 | Light (색은 테마의 `ambientColor`) |

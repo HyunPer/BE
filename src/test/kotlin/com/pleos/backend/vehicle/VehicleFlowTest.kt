@@ -111,7 +111,8 @@ class VehicleFlowTest : ApiTestSupport() {
             status { isOk() }
             jsonPath("$.driverNickname") { value("대학생 자녀") }
             jsonPath("$.vehicleSettings.climate.temperature") { value(19.0) }
-            jsonPath("$.vehicleSettings.seat.reclineAngle") { value(100) }
+            jsonPath("$.vehicleSettings.seat.heatingLevel") { value(0) }
+            jsonPath("$.vehicleSettings.seatPosition") { doesNotExist() }
             jsonPath("$.skin") { doesNotExist() }
             jsonPath("$.vehicleSettings.light") { doesNotExist() }
             jsonPath("$.vehicleSettings.display") { doesNotExist() }
