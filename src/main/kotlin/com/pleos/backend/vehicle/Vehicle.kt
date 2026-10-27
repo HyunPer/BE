@@ -47,5 +47,8 @@ class VehicleMember(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
-    val role: VehicleRole,
+    var role: VehicleRole,
 ) : BaseEntity()
+
+/** 멤버가 나가거나 내보내졌다. 예약·시트 자세 정리는 각 도메인이 이 이벤트를 받아 처리한다. */
+data class MemberLeftEvent(val vehicleId: UUID, val userId: UUID)

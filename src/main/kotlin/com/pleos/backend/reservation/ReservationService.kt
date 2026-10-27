@@ -1,6 +1,7 @@
 package com.pleos.backend.reservation
 
 import com.pleos.backend.common.conflict
+import com.pleos.backend.common.forbidden
 import com.pleos.backend.common.notFound
 import com.pleos.backend.profile.Profile
 import com.pleos.backend.profile.ProfileRepository
@@ -10,7 +11,10 @@ import com.pleos.backend.profile.toVehicleSettings
 import com.pleos.backend.theme.WelcomeResponse
 import com.pleos.backend.theme.WelcomeService
 import com.pleos.backend.user.UserRepository
+import com.pleos.backend.vehicle.MemberLeftEvent
+import com.pleos.backend.vehicle.VehicleRole
 import com.pleos.backend.vehicle.VehicleService
+import org.springframework.context.event.EventListener
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,6 +24,7 @@ import java.util.UUID
 interface ReservationRepository : JpaRepository<Reservation, UUID> {
     fun findFirstByVehicleIdAndStatus(vehicleId: UUID, status: ReservationStatus): Reservation?
     fun findByIdAndVehicleId(id: UUID, vehicleId: UUID): Reservation?
+    fun findFirstByVehicleIdAndUserIdAndStatus(vehicleId: UUID, userId: UUID, status: ReservationStatus): Reservation?
 }
 
 data class ReserveRequest(val profileId: UUID)
@@ -78,10 +83,21 @@ class ReservationService(
         return pendingWithProfile(vehicleId)?.let { (reservation, profile) -> toResponse(reservation, profile) }
     }
 
+    /** 예약한 사람이나 차량 OWNER만 취소할 수 있다(다른 MEMBER는 403). */
     @Transactional
     fun cancel(userId: UUID, vehicleId: UUID) {
-        vehicles.requireMember(userId, vehicleId)
-        reservations.findFirstByVehicleIdAndStatus(vehicleId, ReservationStatus.PENDING)?.cancel()
+        val me = vehicles.requireMember(userId, vehicleId)
+        val pending = reservations.findFirstByVehicleIdAndStatus(vehicleId, ReservationStatus.PENDING) ?: return
+        if (pending.userId != userId && me.role != VehicleRole.OWNER) {
+            throw forbidden("예약한 사람이나 차량 OWNER만 취소할 수 있습니다")
+        }
+        pending.cancel()
+    }
+
+    /** 멤버가 나가면 그 사람의 대기 예약은 의미가 없다. */
+    @EventListener
+    fun onMemberLeft(event: MemberLeftEvent) {
+        reservations.findFirstByVehicleIdAndUserIdAndStatus(event.vehicleId, event.userId, ReservationStatus.PENDING)?.cancel()
     }
 
     // ── 차량 앱 ──

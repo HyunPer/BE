@@ -4,6 +4,7 @@ import com.pleos.backend.auth.AuthUser
 import com.pleos.backend.common.ApiException
 import com.pleos.backend.common.BaseEntity
 import com.pleos.backend.common.notFound
+import com.pleos.backend.vehicle.MemberLeftEvent
 import com.pleos.backend.vehicle.VehicleRepository
 import com.pleos.backend.vehicle.VehicleService
 import io.swagger.v3.oas.annotations.Operation
@@ -15,7 +16,10 @@ import jakarta.persistence.UniqueConstraint
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import org.springframework.context.event.EventListener
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -65,6 +69,13 @@ interface SeatPositionRepository : JpaRepository<SeatPosition, UUID> {
     fun findAllByProfileIdOrderByCreatedAtAsc(profileId: UUID): List<SeatPosition>
     fun findAllByVehicleIdAndProfileIdIn(vehicleId: UUID, profileIds: Collection<UUID>): List<SeatPosition>
     fun deleteAllByProfileId(profileId: UUID)
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        "delete from SeatPosition s where s.vehicleId = :vehicleId " +
+            "and s.profileId in (select p.id from Profile p where p.ownerId = :ownerId)",
+    )
+    fun deleteAllForOwnerOnVehicle(ownerId: UUID, vehicleId: UUID): Int
 }
 
 /**
@@ -135,6 +146,12 @@ class SeatPositionService(
             throw notFound("프로필을 찾을 수 없습니다: $profileId")
         }
         return upsert(profileId, vehicleId, request)
+    }
+
+    /** 차량에서 나간 사람의 이 차량 시트 자세를 지운다. */
+    @EventListener
+    fun onMemberLeft(event: MemberLeftEvent) {
+        repository.deleteAllForOwnerOnVehicle(event.userId, event.vehicleId)
     }
 
     fun find(profileId: UUID, vehicleId: UUID): SeatPosition? = repository.findByProfileIdAndVehicleId(profileId, vehicleId)

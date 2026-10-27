@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pleos QA 콘솔</title>
+<style>
+:root{--bg:#F4F5F7;--panel:#FFFFFF;--line:#DDE1E7;--text:#16181D;--muted:#5B6170;--accent:#1565C0;--ok:#1B5E20;--okbg:#E8F5E9;--bad:#B71C1C;--badbg:#FFEBEE;--warn:#8D5A00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif}
+header{position:sticky;top:0;z-index:5;background:#16181D;color:#fff;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+header h1{font-size:16px;margin:0 12px 0 0}
+header .sub{color:#B0B5BF;font-size:12px;margin-right:auto}
+main{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px;padding:12px}
+section.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.card h2{font-size:14px;margin:0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h3{font-size:13px;margin:4px 0 0;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+input,select{font:inherit;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 7px;min-height:32px;background:#fff;min-width:0}
+input[type=color]{padding:2px;height:32px}
+input[type=checkbox]{min-height:auto}
+button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);border-radius:6px;padding:5px 10px;min-height:32px;cursor:pointer}
+button:hover{border-color:#9AA1AE}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.danger{color:var(--bad);border-color:#F3B4B4}
+header button{background:#2C2F36;border-color:#3D414A;color:#fff}
+header button.primary{background:var(--accent);border-color:var(--accent)}
+.chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;background:#fff;cursor:pointer}
+.chip.on{background:#16181D;color:#fff;border-color:#16181D}
+.list{display:flex;flex-direction:column;gap:4px}
+.item{border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.item .grow{flex:1 1 140px;min-width:0}
+.muted{color:var(--muted);font-size:12px}
+.swatch{width:18px;height:18px;border-radius:4px;border:1px solid rgba(0,0,0,.15);display:inline-block;vertical-align:middle}
+.code{font:600 28px/1.2 ui-monospace,Consolas,monospace;letter-spacing:4px}
+.badge{font-size:11px;border-radius:999px;padding:1px 8px;background:#EEF1F5}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+pre{margin:0;white-space:pre-wrap;word-break:break-all;font:12px/1.4 ui-monospace,Consolas,monospace;background:#F6F7F9;border-radius:6px;padding:6px;max-height:240px;overflow:auto}
+#log{max-height:70vh;overflow:auto}
+.log{border-bottom:1px solid var(--line);padding:4px 0}
+.log summary{cursor:pointer;display:flex;gap:6px;font:12px ui-monospace,Consolas,monospace}
+.st{min-width:34px;font-weight:700}
+.st.s2{color:var(--ok)}.st.s4{color:var(--warn)}.st.s5,.st.s0{color:var(--bad)}
+.qa-row{display:flex;gap:8px;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--line)}
+.qa-row .mark{width:18px;text-align:center;font-weight:700}
+.steps{display:flex;flex-direction:column;gap:3px;font-size:13px}
+#car{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#121212;color:#fff;background-size:cover;background-position:center}
+#car .inner{position:absolute;inset:0;padding:5% 6%;display:flex;flex-direction:column;gap:4%}
+#car .greet{font-size:clamp(14px,2.2vw,24px);font-weight:700}
+#car .meta{font-size:12px;opacity:.85}
+#car .widgets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3%;flex:1}
+#car .w{border-radius:12px;padding:8px;font-size:12px;display:flex;flex-direction:column;justify-content:space-between}
+#car .btns{display:flex;gap:8px}
+#car .btn{padding:6px 14px;font-size:12px;font-weight:600}
+#car .char{position:absolute;width:18%;aspect-ratio:1;object-fit:contain}
+#car .amb{position:absolute;right:3%;top:4%;font-size:11px;display:flex;gap:5px;align-items:center;opacity:.9}
+#car .amb span{width:12px;height:12px;border-radius:50%;display:inline-block;box-shadow:0 0 10px currentColor}
+.empty{color:var(--muted);font-size:12px;padding:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Pleos QA 콘솔</h1>
+  <span class="sub">임시 화면 · 실제 서버 API를 그대로 호출합니다 · 개발 서버 전용</span>
+  <button class="primary" id="btnSeed">데모 가족 만들기</button>
+  <button class="primary" id="btnAutoQa">자동 QA 실행</button>
+  <button id="btnReset">로컬 상태 지우기</button>
+</header>
+
+<main>
+<!-- ───────── 폰 앱 ───────── -->
+<section class="col" aria-label="폰 앱">
+  <div class="card">
+    <h2>폰 · 사용자 <span class="muted" id="meInfo"></span></h2>
+    <div class="row">
+      <input id="nick" placeholder="닉네임 (20자 이하)" style="flex:1">
+      <button class="primary" id="btnSignUp">가입</button>
+      <button id="btnRename">닉네임 변경</button>
+    </div>
+    <div class="row" id="userChips"></div>
+  </div>
+
+  <div class="card">
+    <h2>폰 · 내 차량</h2>
+    <div class="row">
+      <input id="pairCode" placeholder="페어링 코드 6자리" maxlength="6" style="width:150px">
+      <input id="pairNick" placeholder="차 이름 (첫 페어링 시)" style="flex:1">
+      <button class="primary" id="btnPair">페어링</button>
+    </div>
+    <div class="list" id="myVehicles"></div>
+    <div id="vehicleDetail"></div>
+  </div>
+
+  <div class="card">
+    <h2>폰 · 테마 <span class="row"><button id="btnThemeNew">새로 작성</button></span></h2>
+    <input type="hidden" id="themeId">
+    <div class="grid2">
+      <label>이름<input id="tName" value="고양이 밤"></label>
+      <label>실내 조명 색<input type="color" id="tAmbient" value="#7C4DFF"></label>
+    </div>
+    <div class="grid3">
+      <label>배경<input type="color" id="cBackground" value="#0D0B1E"></label>
+      <label>카드<input type="color" id="cSurface" value="#1C1840"></label>
+      <label>포인트<input type="color" id="cPrimary" value="#7C4DFF"></label>
+      <label>버튼 글자<input type="color" id="cOnPrimary" value="#FFFFFF"></label>
+      <label>글자<input type="color" id="cText" value="#F5F3FF"></label>
+      <label>글꼴<select id="tFont"><option>DEFAULT</option><option selected>ROUNDED</option><option>BOLD</option></select></label>
+      <label>버튼<select id="tButton"><option>ROUNDED</option><option selected>PILL</option><option>SQUARE</option><option>OUTLINED</option></select></label>
+      <label>위젯<select id="tWidget"><option>FILLED</option><option>OUTLINED</option><option selected>GLASS</option></select></label>
+      <label>캐릭터 위치<select id="tPlace"><option>BOTTOM_RIGHT</option><option selected>BOTTOM_LEFT</option><option>TOP_RIGHT</option><option>WELCOME_ONLY</option></select></label>
+    </div>
+    <div class="grid2">
+      <label>배경 이미지 <span class="muted" id="bgInfo">없음</span><input type="file" id="fBg" accept="image/*"></label>
+      <label>캐릭터 이미지 <span class="muted" id="chInfo">없음</span><input type="file" id="fCh" accept="image/*"></label>
+    </div>
+    <input type="hidden" id="bgAsset"><input type="hidden" id="chAsset">
+    <div class="row">
+      <button class="primary" id="btnThemeSave">테마 저장</button>
+      <button id="btnThemePreview">차량 화면에 미리보기</button>
+      <button id="btnClearImages">이미지 빼기</button>
+    </div>
+    <h3>내 테마</h3>
+    <div class="list" id="myThemes"></div>
+    <h3>공유 코드로 받기 · 마켓</h3>
+    <div class="row">
+      <input id="importCode" placeholder="공유 코드 8자리" maxlength="8" style="width:150px">
+      <button id="btnPreviewShared">미리보기</button>
+      <button id="btnImport">받기</button>
+      <button id="btnMarket">마켓 새로고침</button>
+    </div>
+    <div class="list" id="market"></div>
+  </div>
+
+  <div class="card">
+    <h2>폰 · 프로필 <span class="row"><button id="btnProfileNew">새로 작성</button></span></h2>
+    <input type="hidden" id="profileId">
+    <div class="grid2">
+      <label>이름<input id="pName" value="밤 드라이브"></label>
+      <label>테마<select id="pTheme"><option value="">기본 테마</option></select></label>
+    </div>
+    <div class="grid3">
+      <label>온도 (16–32)<input type="number" id="pTemp" value="19" step="0.5"></label>
+      <label>풍량 (0–8)<input type="number" id="pFan" value="4"></label>
+      <label>조명 밝기 (0–100)<input type="number" id="pBright" value="70"></label>
+      <label>시트 열선 (0–3)<input type="number" id="pHeat" value="2"></label>
+      <label>시트 통풍 (0–3)<input type="number" id="pVent" value="0"></label>
+      <label>핸들 열선<select id="pSteer"><option value="true">켬</option><option value="false">끔</option></select></label>
+    </div>
+    <div class="grid2">
+      <label>위젯 (쉼표로)<input id="pWidgets" value="music,weather,battery"></label>
+      <label>웰컴 사운드 ID<input id="pSound" value="chime-01"></label>
+    </div>
+    <div class="row"><button class="primary" id="btnProfileSave">프로필 저장</button></div>
+    <h3>내 프로필 (선택 차량 기준 시트 슬롯·예약)</h3>
+    <div class="list" id="myProfiles"></div>
+    <div id="reservation" class="muted"></div>
+  </div>
+</section>
+
+<!-- ───────── 차량 앱 ───────── -->
+<section class="col" aria-label="차량 앱">
+  <div class="card">
+    <h2>차량 · 등록</h2>
+    <div class="row">
+      <input id="model" value="IONIQ 5" style="flex:1">
+      <button class="primary" id="btnRegister">차량 등록</button>
+    </div>
+    <div class="row" id="vehicleChips"></div>
+    <div id="carSelf"></div>
+  </div>
+
+  <div class="card">
+    <h2>차량 · 탑승 시뮬레이션</h2>
+    <div class="row">
+      <button class="primary" id="btnBoard">탑승 (2단계 적용)</button>
+      <label style="flex-direction:row;align-items:center;gap:4px"><input type="checkbox" id="sdkFail"> SDK 적용 실패 흉내</label>
+    </div>
+    <div class="steps" id="boardSteps"></div>
+    <div class="list" id="picker"></div>
+  </div>
+
+  <div class="card">
+    <h2>차량 화면 미리보기 <span class="muted" id="carCaption">아직 없음</span></h2>
+    <div id="car" role="img" aria-label="테마가 적용된 차량 앱 화면 미리보기">
+      <div class="inner">
+        <div class="meta" id="carMeta">탑승하거나 테마 미리보기를 누르세요</div>
+        <div class="greet" id="carGreet">Pleos 프로필</div>
+        <div class="widgets" id="carWidgets"></div>
+        <div class="btns" id="carBtns"></div>
+      </div>
+      <img class="char" id="carChar" alt="" hidden>
+      <div class="amb" id="carAmb" hidden><span></span><b></b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>차량 · 지금 자세 저장</h2>
+    <div class="grid2">
+      <label>프로필<select id="seatProfile"></select></label>
+      <label>메모리 슬롯 (1–10, 비우면 없음)<input type="number" id="seatSlot"></label>
+      <label>등받이 위치 (차량 단위)<input type="number" id="seatBack" value="-12"></label>
+      <label>앞뒤 위치 (차량 단위)<input type="number" id="seatFore" value="340"></label>
+    </div>
+    <div class="row"><button class="primary" id="btnSeatSave">지금 자세 저장</button><button id="btnLoadDrivers">프로필 목록 불러오기</button></div>
+  </div>
+</section>
+
+<!-- ───────── QA ───────── -->
+<section class="col" aria-label="QA">
+  <div class="card">
+    <h2>자동 QA 결과 <span class="muted" id="qaSummary"></span></h2>
+    <div id="qaResults" class="empty">상단의 "자동 QA 실행"을 누르면 데모 시나리오와 예외 상황을 순서대로 검사합니다.</div>
+  </div>
+  <div class="card">
+    <h2>요청 로그 <button id="btnClearLog">지우기</button></h2>
+    <div id="log"></div>
+  </div>
+</section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ── 상태(브라우저에만 저장) ──
+const S = { users: [], vehicles: [], au: -1, av: -1, lastWelcome: null };
+try { Object.assign(S, JSON.parse(localStorage.getItem('pleosQa') || '{}')); } catch (e) { /* 저장소 없음 */ }
+const save = () => { try { localStorage.setItem('pleosQa', JSON.stringify({ users: S.users, vehicles: S.vehicles, au: S.au, av: S.av })); } catch (e) { /* 무시 */ } };
+const me = () => S.users[S.au];
+const car = () => S.vehicles[S.av];
+
+// ── API 호출 + 로그 ──
+async function api(method, path, { token, body, form } = {}) {
+  const headers = {};
+  if (token) headers.Authorization = 'Bearer ' + token;
+  let payload;
+  if (form) payload = form;
+  else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
+  const t0 = performance.now();
+  let status = 0, data = null;
+  try {
+    const res = await fetch(path, { method, headers, body: payload });
+    status = res.status;
+    const text = await res.text();
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
+  } catch (e) { data = String(e); }
+  addLog(method, path, status, Math.round(performance.now() - t0), body, data);
+  return { status, ok: status >= 200 && status < 300, data };
+}
+function addLog(method, path, status, ms, req, res) {
+  const d = document.createElement('details');
+  d.className = 'log';
+  d.innerHTML = `<summary><span class="st s${String(status)[0]}">${status || 'ERR'}</span><span>${esc(method)} ${esc(path)}</span><span class="muted">${ms}ms</span></summary>` +
+    (req !== undefined ? `<pre>요청 ${esc(JSON.stringify(req, null, 2))}</pre>` : '') +
+    `<pre>응답 ${esc(typeof res === 'string' ? res : JSON.stringify(res, null, 2))}</pre>`;
+  $('log').prepend(d);
+}
+function alertProblem(r, what) {
+  if (r.ok) return false;
+  const detail = r.data && r.data.detail ? r.data.detail : JSON.stringify(r.data);
+  alert(`${what} 실패 (${r.status})\n${detail}`);
+  return true;
+}
+
+// ── 사용자 ──
+function renderUsers() {
+  $('userChips').innerHTML = S.users.map((u, i) => `<button class="chip ${i === S.au ? 'on' : ''}" data-i="${i}">${esc(u.nickname)}</button>`).join('') ||
+    '<span class="empty">가입하거나 "데모 가족 만들기"를 누르세요</span>';
+  $('meInfo').textContent = me() ? `현재: ${me().nickname}` : '';
+}
+$('userChips').onclick = (e) => { const i = e.target.dataset.i; if (i === undefined) return; S.au = +i; save(); renderUsers(); refreshPhone(); };
+$('btnSignUp').onclick = async () => {
+  const r = await api('POST', '/api/v1/users', { body: { nickname: $('nick').value } });
+  if (alertProblem(r, '가입')) return;
+  S.users.push({ nickname: r.data.user.nickname, id: r.data.user.id, token: r.data.accessToken });
+  S.au = S.users.length - 1; save(); renderUsers(); refreshPhone();
+};
+$('btnRename').onclick = async () => {
+  if (!me()) return alert('사용자를 먼저 고르세요');
+  const r = await api('PATCH', '/api/v1/users/me', { token: me().token, body: { nickname: $('nick').value } });
+  if (alertProblem(r, '닉네임 변경')) return;
+  me().nickname = r.data.nickname; save(); renderUsers(); refreshPhone();
+};
+
+// ── 폰: 차량 ──
+let selectedPhoneVehicle = null;
+$('btnPair').onclick = async () => {
+  if (!me()) return alert('사용자를 먼저 고르세요');
+  const r = await api('POST', '/api/v1/vehicles/pair', { token: me().token, body: { pairingCode: $('pairCode').value, nickname: $('pairNick').value || null } });
+  if (alertProblem(r, '페어링')) return;
+  selectedPhoneVehicle = r.data.id; refreshPhone();
+};
+async function refreshPhone() {
+  renderUsers();
+  if (!me()) { ['myVehicles', 'vehicleDetail', 'myThemes', 'myProfiles', 'reservation'].forEach((id) => { $(id).innerHTML = ''; }); return; }
+  const t = me().token;
+  const [vs, ts, ps] = await Promise.all([api('GET', '/api/v1/vehicles', { token: t }), api('GET', '/api/v1/themes', { token: t }), api('GET', '/api/v1/profiles', { token: t })]);
+  if (vs.status === 401) { alert('토큰이 무효입니다. 이 사용자를 목록에서 지웁니다.'); S.users.splice(S.au, 1); S.au = S.users.length - 1; save(); return refreshPhone(); }
+  const vehicles = vs.ok ? vs.data : [];
+  if (!vehicles.some((v) => v.id === selectedPhoneVehicle)) selectedPhoneVehicle = vehicles[0] ? vehicles[0].id : null;
+  $('myVehicles').innerHTML = vehicles.map((v) => `<div class="item"><input type="radio" name="pv" value="${v.id}" ${v.id === selectedPhoneVehicle ? 'checked' : ''} aria-label="${esc(v.nickname || v.model)} 선택">
+    <span class="grow"><b>${esc(v.nickname || '(이름 없음)')}</b> <span class="muted">${esc(v.model)}</span></span><span class="badge">${v.myRole}</span></div>`).join('') || '<div class="empty">페어링한 차량이 없습니다</div>';
+  renderThemes(ts.ok ? ts.data : []);
+  await renderVehicleDetail();
+  await renderProfiles(ps.ok ? ps.data : []);
+}
+$('myVehicles').onchange = (e) => { selectedPhoneVehicle = e.target.value; refreshPhone(); };
+async function renderVehicleDetail() {
+  if (!selectedPhoneVehicle) { $('vehicleDetail').innerHTML = ''; return; }
+  const r = await api('GET', `/api/v1/vehicles/${selectedPhoneVehicle}`, { token: me().token });
+  if (!r.ok) { $('vehicleDetail').innerHTML = ''; return; }
+  const d = r.data, owner = d.myRole === 'OWNER';
+  $('vehicleDetail').innerHTML = `<h3>멤버 (${d.members.length})</h3><div class="list">${d.members.map((m) => `<div class="item"><span class="grow">${esc(m.nickname)} <span class="badge">${m.role}</span></span>
+      ${owner && m.role !== 'OWNER' ? `<button data-act="owner" data-u="${m.userId}">OWNER 넘기기</button><button class="danger" data-act="kick" data-u="${m.userId}">내보내기</button>` : ''}</div>`).join('')}</div>
+    <div class="row">${owner ? `<input id="renameCar" placeholder="새 차 이름" style="flex:1"><button data-act="rename">이름 변경</button><button data-act="code">페어링 코드 재발급</button>` : ''}<button class="danger" data-act="leave">차량에서 나가기</button></div>`;
+}
+$('vehicleDetail').onclick = async (e) => {
+  const act = e.target.dataset.act; if (!act) return;
+  const base = `/api/v1/vehicles/${selectedPhoneVehicle}`, t = me().token;
+  let r;
+  if (act === 'owner') r = await api('POST', base + '/owner', { token: t, body: { userId: e.target.dataset.u } });
+  if (act === 'kick') r = await api('DELETE', base + '/members/' + e.target.dataset.u, { token: t });
+  if (act === 'rename') r = await api('PATCH', base, { token: t, body: { nickname: $('renameCar').value } });
+  if (act === 'code') { r = await api('POST', base + '/pairing-code', { token: t }); if (r.ok) alert('새 페어링 코드: ' + r.data.pairingCode); }
+  if (act === 'leave') r = await api('DELETE', base + '/members/me', { token: t });
+  if (r && alertProblem(r, '차량 관리')) return;
+  refreshPhone(); refreshCar();
+};
+
+// ── 폰: 테마 ──
+let themesCache = [];
+function themeRequest() {
+  return {
+    name: $('tName').value,
+    colors: { background: $('cBackground').value, surface: $('cSurface').value, primary: $('cPrimary').value, onPrimary: $('cOnPrimary').value, text: $('cText').value },
+    backgroundAssetId: $('bgAsset').value || null, characterAssetId: $('chAsset').value || null,
+    characterPlacement: $('tPlace').value, buttonStyle: $('tButton').value, widgetStyle: $('tWidget').value, fontStyle: $('tFont').value,
+    ambientColor: $('tAmbient').value,
+  };
+}
+function skinFromForm() {
+  const q = themeRequest();
+  return { name: q.name, colors: q.colors, backgroundImageUrl: q.backgroundAssetId ? '/files/' + q.backgroundAssetId : null,
+    character: q.characterAssetId ? { imageUrl: '/files/' + q.characterAssetId, placement: q.characterPlacement } : null,
+    buttonStyle: q.buttonStyle, widgetStyle: q.widgetStyle, fontStyle: q.fontStyle, ambientColor: q.ambientColor };
+}
+function loadThemeIntoForm(t) {
+  $('themeId').value = t.id; $('tName').value = t.skin.name; $('tAmbient').value = t.skin.ambientColor;
+  const c = t.skin.colors;
+  $('cBackground').value = c.background; $('cSurface').value = c.surface; $('cPrimary').value = c.primary; $('cOnPrimary').value = c.onPrimary; $('cText').value = c.text;
+  $('tButton').value = t.skin.buttonStyle; $('tWidget').value = t.skin.widgetStyle; $('tFont').value = t.skin.fontStyle;
+  $('tPlace').value = t.skin.character ? t.skin.character.placement : 'BOTTOM_RIGHT';
+  $('bgAsset').value = t.backgroundAssetId || ''; $('chAsset').value = t.characterAssetId || '';
+  $('bgInfo').textContent = t.backgroundAssetId ? '있음' : '없음'; $('chInfo').textContent = t.characterAssetId ? '있음' : '없음';
+}
+function renderThemes(list) {
+  themesCache = list;
+  $('myThemes').innerHTML = list.map((t) => `<div class="item"><span class="swatch" style="background:${esc(t.skin.colors.background)}"></span><span class="swatch" style="background:${esc(t.skin.colors.primary)}"></span>
+    <span class="grow"><b>${esc(t.skin.name)}</b> ${t.imported ? '<span class="badge">받은 테마</span>' : ''} ${t.shareCode ? `<span class="badge">공유 ${esc(t.shareCode)}</span>` : ''}</span>
+    <button data-act="edit" data-id="${t.id}">편집</button>${t.shareCode ? `<button data-act="unshare" data-id="${t.id}">공유 중지</button>` : `<button data-act="share" data-id="${t.id}">공유</button>`}<button class="danger" data-act="del" data-id="${t.id}">삭제</button></div>`).join('') || '<div class="empty">테마가 없습니다</div>';
+  const sel = $('pTheme'), cur = sel.value;
+  sel.innerHTML = '<option value="">기본 테마</option>' + list.map((t) => `<option value="${t.id}">${esc(t.skin.name)}</option>`).join('');
+  sel.value = list.some((t) => t.id === cur) ? cur : '';
+}
+$('myThemes').onclick = async (e) => {
+  const { act, id } = e.target.dataset; if (!act) return;
+  const t = me().token;
+  if (act === 'edit') { loadThemeIntoForm(themesCache.find((x) => x.id === id)); renderCar({ skin: skinFromForm(), greeting: '테마 미리보기', widgets: ['music', 'weather', 'battery'] }, '테마 편집 미리보기'); return; }
+  let r;
+  if (act === 'share') { r = await api('POST', `/api/v1/themes/${id}/share`, { token: t }); if (r.ok) $('importCode').value = r.data.shareCode; }
+  if (act === 'unshare') r = await api('DELETE', `/api/v1/themes/${id}/share`, { token: t });
+  if (act === 'del') r = await api('DELETE', `/api/v1/themes/${id}`, { token: t });
+  if (r && alertProblem(r, '테마')) return;
+  refreshPhone();
+};
+$('btnThemeNew').onclick = () => { $('themeId').value = ''; $('bgAsset').value = ''; $('chAsset').value = ''; $('bgInfo').textContent = '없음'; $('chInfo').textContent = '없음'; };
+$('btnClearImages').onclick = () => { $('bgAsset').value = ''; $('chAsset').value = ''; $('bgInfo').textContent = '없음'; $('chInfo').textContent = '없음'; };
+$('btnThemePreview').onclick = () => renderCar({ skin: skinFromForm(), greeting: '테마 미리보기', widgets: ['music', 'weather', 'battery'] }, '테마 편집 미리보기');
+async function upload(file, hiddenId, infoId) {
+  if (!me()) return alert('사용자를 먼저 고르세요');
+  const fd = new FormData(); fd.append('file', file);
+  const r = await api('POST', '/api/v1/assets', { token: me().token, form: fd });
+  if (alertProblem(r, '이미지 업로드')) return;
+  $(hiddenId).value = r.data.id; $(infoId).textContent = `${r.data.contentType} · ${Math.round(r.data.sizeBytes / 1024)}KB`;
+}
+$('fBg').onchange = (e) => e.target.files[0] && upload(e.target.files[0], 'bgAsset', 'bgInfo');
+$('fCh').onchange = (e) => e.target.files[0] && upload(e.target.files[0], 'chAsset', 'chInfo');
+$('btnThemeSave').onclick = async () => {
+  if (!me()) return alert('사용자를 먼저 고르세요');
+  const id = $('themeId').value;
+  const r = await api(id ? 'PUT' : 'POST', id ? `/api/v1/themes/${id}` : '/api/v1/themes', { token: me().token, body: themeRequest() });
+  if (alertProblem(r, '테마 저장')) return;
+  $('themeId').value = r.data.id; refreshPhone();
+};
+$('btnPreviewShared').onclick = async () => {
+  const r = await api('GET', `/api/v1/themes/shared/${encodeURIComponent($('importCode').value)}`, { token: me() && me().token });
+  if (alertProblem(r, '공유 코드 미리보기')) return;
+  renderCar({ skin: r.data.skin, greeting: `${r.data.authorNickname}님의 테마`, widgets: ['music', 'weather', 'battery'] }, `공유 코드 ${r.data.shareCode} 미리보기`);
+};
+$('btnImport').onclick = async () => {
+  if (!me()) return alert('사용자를 먼저 고르세요');
+  const r = await api('POST', '/api/v1/themes/import', { token: me().token, body: { shareCode: $('importCode').value } });
+  if (alertProblem(r, '테마 받기')) return;
+  refreshPhone();
+};
+$('btnMarket').onclick = async () => {
+  if (!me()) return alert('사용자를 먼저 고르세요');
+  const r = await api('GET', '/api/v1/themes/market', { token: me().token });
+  if (!r.ok) return;
+  $('market').innerHTML = r.data.map((t) => `<div class="item"><span class="swatch" style="background:${esc(t.skin.colors.background)}"></span><span class="swatch" style="background:${esc(t.skin.colors.primary)}"></span>
+    <span class="grow"><b>${esc(t.skin.name)}</b> <span class="muted">${esc(t.authorNickname)} · 받은 수 ${t.importCount}</span></span><button data-code="${esc(t.shareCode)}">코드 넣기</button></div>`).join('') || '<div class="empty">공유 중인 테마가 없습니다</div>';
+};
+$('market').onclick = (e) => { if (e.target.dataset.code) $('importCode').value = e.target.dataset.code; };
+
+// ── 폰: 프로필 ──
+let profilesCache = [];
+function profileRequest() {
+  return {
+    name: $('pName').value, themeId: $('pTheme').value || null,
+    display: { widgets: $('pWidgets').value.split(',').map((s) => s.trim()).filter(Boolean) },
+    seat: { heatingLevel: +$('pHeat').value, ventilationLevel: +$('pVent').value, steeringWheelHeating: $('pSteer').value === 'true' },
+    climate: { temperature: +$('pTemp').value, fanSpeed: +$('pFan').value },
+    light: { brightness: +$('pBright').value }, welcomeSoundId: $('pSound').value || null,
+  };
+}
+async function renderProfiles(list) {
+  profilesCache = list;
+  const seatInfo = {};
+  if (selectedPhoneVehicle) {
+    await Promise.all(list.map(async (p) => {
+      const r = await api('GET', `/api/v1/profiles/${p.id}/seat-positions`, { token: me().token });
+      const hit = r.ok ? r.data.find((s) => s.vehicleId === selectedPhoneVehicle) : null;
+      seatInfo[p.id] = hit ? hit.position : null;
+    }));
+  }
+  $('myProfiles').innerHTML = list.map((p) => {
+    const s = seatInfo[p.id];
+    const seatText = s ? (s.memorySlot ? `슬롯 ${s.memorySlot}` : `위치 ${s.backrestPosition ?? '-'}/${s.foreAftPosition ?? '-'}`) : '자세 없음';
+    return `<div class="item"><span class="grow"><b>${esc(p.name)}</b> <span class="muted">${p.climate.temperature}° · 열선 ${p.seat.heatingLevel} · ${p.themeId ? '테마 있음' : '기본 테마'} · ${seatText}</span></span>
+      <button data-act="edit" data-id="${p.id}">편집</button>
+      ${selectedPhoneVehicle ? `<input type="number" min="1" max="10" placeholder="슬롯" style="width:64px" data-slot="${p.id}" aria-label="${esc(p.name)} 메모리 슬롯"><button data-act="slot" data-id="${p.id}">슬롯 저장</button><button data-act="reserve" data-id="${p.id}">다음 운전자 예약</button>` : ''}
+      <button class="danger" data-act="del" data-id="${p.id}">삭제</button></div>`;
+  }).join('') || '<div class="empty">프로필이 없습니다</div>';
+  if (selectedPhoneVehicle) {
+    const r = await api('GET', `/api/v1/vehicles/${selectedPhoneVehicle}/next-driver`, { token: me().token });
+    $('reservation').innerHTML = r.status === 204 ? '대기 예약 없음' : r.ok ? `대기 예약: <b>${esc(r.data.driverNickname)}</b> · ${esc(r.data.profileName)} <button id="btnCancelRes">예약 취소</button>` : '';
+    const c = $('btnCancelRes');
+    if (c) c.onclick = async () => { const x = await api('DELETE', `/api/v1/vehicles/${selectedPhoneVehicle}/next-driver`, { token: me().token }); if (!alertProblem(x, '예약 취소')) refreshPhone(); };
+  } else $('reservation').textContent = '';
+}
+$('myProfiles').onclick = async (e) => {
+  const { act, id } = e.target.dataset; if (!act) return;
+  const t = me().token;
+  if (act === 'edit') {
+    const p = profilesCache.find((x) => x.id === id);
+    $('profileId').value = p.id; $('pName').value = p.name; $('pTheme').value = p.themeId || '';
+    $('pTemp').value = p.climate.temperature; $('pFan').value = p.climate.fanSpeed; $('pBright').value = p.light.brightness;
+    $('pHeat').value = p.seat.heatingLevel; $('pVent').value = p.seat.ventilationLevel; $('pSteer').value = String(p.seat.steeringWheelHeating);
+    $('pWidgets').value = p.display.widgets.join(','); $('pSound').value = p.welcomeSoundId || '';
+    return;
+  }
+  let r;
+  if (act === 'slot') {
+    const v = document.querySelector(`[data-slot="${id}"]`).value;
+    r = await api('PUT', `/api/v1/profiles/${id}/seat-positions/${selectedPhoneVehicle}`, { token: t, body: { memorySlot: v ? +v : null } });
+  }
+  if (act === 'reserve') r = await api('PUT', `/api/v1/vehicles/${selectedPhoneVehicle}/next-driver`, { token: t, body: { profileId: id } });
+  if (act === 'del') r = await api('DELETE', `/api/v1/profiles/${id}`, { token: t });
+  if (r && alertProblem(r, '프로필')) return;
+  refreshPhone();
+};
+$('btnProfileNew').onclick = () => { $('profileId').value = ''; };
+$('btnProfileSave').onclick = async () => {
+  if (!me()) return alert('사용자를 먼저 고르세요');
+  const id = $('profileId').value;
+  const r = await api(id ? 'PUT' : 'POST', id ? `/api/v1/profiles/${id}` : '/api/v1/profiles', { token: me().token, body: profileRequest() });
+  if (alertProblem(r, '프로필 저장')) return;
+  $('profileId').value = r.data.id; refreshPhone();
+};
+
+// ── 차량 앱 ──
+function renderVehicles() {
+  $('vehicleChips').innerHTML = S.vehicles.map((v, i) => `<button class="chip ${i === S.av ? 'on' : ''}" data-i="${i}">${esc(v.model)} · ${esc(v.id.slice(0, 6))}</button>`).join('') ||
+    '<span class="empty">차량을 등록하세요</span>';
+}
+$('vehicleChips').onclick = (e) => { const i = e.target.dataset.i; if (i === undefined) return; S.av = +i; save(); refreshCar(); };
+$('btnRegister').onclick = async () => {
+  const r = await api('POST', '/vehicle-api/v1/vehicles', { body: { model: $('model').value } });
+  if (alertProblem(r, '차량 등록')) return;
+  S.vehicles.push({ id: r.data.vehicleId, token: r.data.vehicleToken, model: $('model').value });
+  S.av = S.vehicles.length - 1; save(); refreshCar();
+};
+async function refreshCar() {
+  renderVehicles();
+  if (!car()) { $('carSelf').innerHTML = ''; return; }
+  const r = await api('GET', '/vehicle-api/v1/me', { token: car().token });
+  if (!r.ok) { $('carSelf').innerHTML = `<span class="bad">차량 정보를 불러오지 못했습니다 (${r.status})</span>`; return; }
+  $('carSelf').innerHTML = `<div class="muted">휴대폰에서 이 코드를 입력하세요 · 멤버 ${r.data.memberCount}명 · ${esc(r.data.nickname || '이름 없음')}</div>
+    <div class="row"><span class="code">${esc(r.data.pairingCode)}</span><button id="btnUseCode">폰 페어링 칸에 넣기</button></div>`;
+  $('btnUseCode').onclick = () => { $('pairCode').value = r.data.pairingCode; };
+}
+function step(text, cls) { $('boardSteps').insertAdjacentHTML('beforeend', `<div class="${cls || ''}">${text}</div>`); }
+function describeSettings(s) {
+  const seat = s.seatPosition ? (s.seatPosition.memorySlot ? `시트 메모리 ${s.seatPosition.memorySlot}번 호출` : `시트 위치 이동 (등받이 ${s.seatPosition.backrestPosition ?? '-'}, 앞뒤 ${s.seatPosition.foreAftPosition ?? '-'})`) : '시트 위치 그대로';
+  return `${seat} · 공조 ${s.climate.temperature}° 풍량 ${s.climate.fanSpeed} · 시트 열선 ${s.seat.heatingLevel} · 통풍 ${s.seat.ventilationLevel} · 핸들 열선 ${s.seat.steeringWheelHeating ? '켬' : '끔'}`;
+}
+async function applyAndWelcome(settings, reportPath, who) {
+  step(`① 차량 설정 받음 (${esc(who)}): ${esc(describeSettings(settings))}`);
+  if ($('sdkFail').checked) { step('✗ Vehicle SDK 적용 실패(흉내) → 적용 완료를 보고하지 않고 멈춤', 'bad'); return; }
+  step('✓ Vehicle SDK 적용 완료(시뮬레이션)', 'ok');
+  const w = await api('POST', reportPath, { token: car().token });
+  if (!w.ok) { step(`✗ 적용 완료 보고 실패 (${w.status}) ${esc(w.data && w.data.detail)}`, 'bad'); return; }
+  step(`② 웰컴 묶음 받음: 테마 "${esc(w.data.skin.name)}" · 조명 ${esc(w.data.ambientLight.color)} ${w.data.ambientLight.brightness}% · 사운드 ${esc(w.data.welcomeSoundId || '없음')}`, 'ok');
+  step(`🔊 TTS: "${esc(w.data.greeting)}"`);
+  renderCar(w.data, `${w.data.driverNickname} · 웰컴 적용됨`);
+}
+$('btnBoard').onclick = async () => {
+  if (!car()) return alert('차량을 먼저 등록하거나 고르세요');
+  $('boardSteps').innerHTML = ''; $('picker').innerHTML = '';
+  const r = await api('GET', '/vehicle-api/v1/me/next-driver', { token: car().token });
+  if (r.status === 204) {
+    step('예약 없음 → 1탭 프로필 선택 화면');
+    const d = await api('GET', '/vehicle-api/v1/me/profiles', { token: car().token });
+    $('picker').innerHTML = (d.ok ? d.data : []).map((drv) => `<div class="item"><span class="grow"><b>${esc(drv.nickname)}</b></span>${drv.profiles.map((p) => `<button data-p='${esc(JSON.stringify(p))}' data-who="${esc(drv.nickname)}">${esc(p.name)}</button>`).join('') || '<span class="muted">프로필 없음</span>'}</div>`).join('') || '<div class="empty">멤버가 없습니다</div>';
+    return;
+  }
+  if (!r.ok) return step(`✗ 다음 운전자 조회 실패 (${r.status})`, 'bad');
+  await applyAndWelcome(r.data.vehicleSettings, `/vehicle-api/v1/me/next-driver/${r.data.reservationId}/applied`, `${r.data.driverNickname} · ${r.data.profileName}`);
+  refreshPhone();
+};
+$('picker').onclick = async (e) => {
+  if (!e.target.dataset.p) return;
+  const p = JSON.parse(e.target.dataset.p);
+  $('picker').innerHTML = '';
+  await applyAndWelcome(p.vehicleSettings, `/vehicle-api/v1/me/profiles/${p.profileId}/applied`, `${e.target.dataset.who} · ${p.name}`);
+};
+$('btnLoadDrivers').onclick = async () => {
+  if (!car()) return alert('차량을 먼저 고르세요');
+  const d = await api('GET', '/vehicle-api/v1/me/profiles', { token: car().token });
+  $('seatProfile').innerHTML = (d.ok ? d.data : []).flatMap((drv) => drv.profiles.map((p) => `<option value="${p.profileId}">${esc(drv.nickname)} · ${esc(p.name)}</option>`)).join('');
+};
+$('btnSeatSave').onclick = async () => {
+  if (!car() || !$('seatProfile').value) return alert('차량과 프로필을 고르세요 ("프로필 목록 불러오기")');
+  const num = (id) => ($(id).value === '' ? null : +$(id).value);
+  const r = await api('PUT', `/vehicle-api/v1/me/profiles/${$('seatProfile').value}/seat-position`, { token: car().token, body: { memorySlot: num('seatSlot'), backrestPosition: num('seatBack'), foreAftPosition: num('seatFore') } });
+  if (!alertProblem(r, '지금 자세 저장')) { alert('저장했습니다'); refreshPhone(); }
+};
+
+// ── 차량 화면 미리보기(스킨 렌더링 규격의 참고 구현) ──
+const RADIUS = { ROUNDED: '12px', PILL: '999px', SQUARE: '3px', OUTLINED: '12px' };
+const WIDGET_LABEL = { music: '음악', weather: '날씨', battery: '배터리' };
+function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; }
+function renderCar(w, caption) {
+  const s = w.skin, c = s.colors, el = $('car');
+  el.style.backgroundColor = c.background;
+  el.style.backgroundImage = s.backgroundImageUrl ? `linear-gradient(${rgba(c.background, 0.35)},${rgba(c.background, 0.35)}),url("${s.backgroundImageUrl}")` : 'none';
+  el.style.color = c.text;
+  el.style.fontFamily = s.fontStyle === 'ROUNDED' ? '"Arial Rounded MT Bold","Malgun Gothic",sans-serif' : 'inherit';
+  el.style.fontWeight = s.fontStyle === 'BOLD' ? '700' : '400';
+  $('carMeta').textContent = `${s.name} 테마`;
+  $('carGreet').textContent = w.greeting || '';
+  const card = s.widgetStyle === 'OUTLINED' ? `background:transparent;border:2px solid ${c.surface}`
+    : s.widgetStyle === 'GLASS' ? `background:${rgba(c.surface, 0.72)};border:1px solid ${rgba(c.text, 0.12)};backdrop-filter:blur(6px)` : `background:${c.surface}`;
+  $('carWidgets').innerHTML = (w.widgets || []).slice(0, 6).map((x) => `<div class="w" style="${card}"><span style="opacity:.75">${esc(WIDGET_LABEL[x] || x)}</span><b>[${esc(WIDGET_LABEL[x] || x)} 데이터]</b></div>`).join('');
+  const btn = s.buttonStyle === 'OUTLINED' ? `background:transparent;border:2px solid ${c.primary};color:${c.text}` : `background:${c.primary};border:0;color:${c.onPrimary}`;
+  $('carBtns').innerHTML = ['프로필 바꾸기', '테마'].map((t) => `<span class="btn" style="${btn};border-radius:${RADIUS[s.buttonStyle]}">${t}</span>`).join('');
+  const ch = $('carChar');
+  if (s.character && s.character.placement !== 'WELCOME_ONLY') {
+    ch.hidden = false; ch.src = s.character.imageUrl; ch.style.cssText = '';
+    const p = s.character.placement;
+    ch.style[p === 'TOP_RIGHT' ? 'top' : 'bottom'] = '4%';
+    ch.style[p === 'BOTTOM_LEFT' ? 'left' : 'right'] = '3%';
+  } else ch.hidden = true;
+  const amb = $('carAmb');
+  amb.hidden = false;
+  amb.querySelector('span').style.color = (w.ambientLight && w.ambientLight.color) || s.ambientColor;
+  amb.querySelector('span').style.background = (w.ambientLight && w.ambientLight.color) || s.ambientColor;
+  amb.querySelector('b').textContent = `실내 조명 ${(w.ambientLight && w.ambientLight.color) || s.ambientColor}${w.ambientLight ? ` · ${w.ambientLight.brightness}%` : ''}`;
+  $('carCaption').textContent = caption || '';
+}
+
+// ── 시드 ──
+$('btnSeed').onclick = async () => {
+  const r = await api('POST', '/qa/api/seed');
+  if (alertProblem(r, '데모 가족 만들기')) return;
+  r.data.users.forEach((u) => S.users.push({ nickname: u.nickname, id: u.userId, token: u.token }));
+  S.vehicles.push({ id: r.data.vehicle.id, token: r.data.vehicle.token, model: r.data.vehicle.model });
+  S.au = S.users.length - 1; S.av = S.vehicles.length - 1; selectedPhoneVehicle = r.data.vehicle.id;
+  $('importCode').value = r.data.sharedThemeCode;
+  save(); refreshPhone(); refreshCar();
+  step('데모 가족 생성: 엄마(OWNER)·아빠·대학생 자녀, 자녀의 "밤 드라이브"가 다음 운전자로 예약됨. "탑승"을 눌러보세요.');
+};
+$('btnReset').onclick = () => { if (!confirm('브라우저에 저장된 사용자·차량 토큰 목록을 지웁니다(서버 데이터는 그대로).')) return; S.users = []; S.vehicles = []; S.au = -1; S.av = -1; save(); refreshPhone(); refreshCar(); };
+$('btnClearLog').onclick = () => { $('log').innerHTML = ''; };
+
+// ── 자동 QA ──
+function pngBlob() { return new Promise((res) => { const cv = document.createElement('canvas'); cv.width = cv.height = 8; const g = cv.getContext('2d'); g.fillStyle = '#7C4DFF'; g.fillRect(0, 0, 8, 8); cv.toBlob(res, 'image/png'); }); }
+async function runAutoQa() {
+  const out = $('qaResults'); out.className = ''; out.innerHTML = '';
+  let pass = 0, fail = 0;
+  const ctx = {};
+  const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
+  const status = (r, code, what) => expect(r.status === code, `${what}: ${code} 기대, ${r.status} 받음 ${r.data && r.data.detail ? '· ' + r.data.detail : ''}`);
+  const U = (k) => ctx.users[k].token;
+  const steps = [
+    ['차량 등록', async () => { const r = await api('POST', '/vehicle-api/v1/vehicles', { body: { model: 'QA 차량' } }); status(r, 201, '등록'); ctx.car = r.data; }],
+    ['가족 3명 가입', async () => { ctx.users = {}; for (const n of ['엄마', '아빠', '자녀']) { const r = await api('POST', '/api/v1/users', { body: { nickname: 'QA' + n } }); status(r, 201, n); ctx.users[n] = { token: r.data.accessToken, id: r.data.user.id }; } }],
+    ['첫 페어링은 OWNER, 이후 MEMBER', async () => { const a = await api('POST', '/api/v1/vehicles/pair', { token: U('엄마'), body: { pairingCode: ctx.car.pairingCode, nickname: 'QA카' } }); expect(a.data.myRole === 'OWNER', '엄마 OWNER'); for (const n of ['아빠', '자녀']) { const r = await api('POST', '/api/v1/vehicles/pair', { token: U(n), body: { pairingCode: ctx.car.pairingCode } }); expect(r.data.myRole === 'MEMBER', n + ' MEMBER'); } }],
+    ['틀린 페어링 코드 → 404', async () => { const r = await api('POST', '/api/v1/vehicles/pair', { token: U('아빠'), body: { pairingCode: ctx.car.pairingCode === '000000' ? '000001' : '000000' } }); status(r, 404, '틀린 코드'); }],
+    ['토큰 없음·틀림 → 401, 토큰 섞어 쓰기 → 401', async () => { status(await api('GET', '/api/v1/profiles'), 401, '토큰 없음'); status(await api('GET', '/api/v1/profiles', { token: 'nope' }), 401, '틀린 토큰'); status(await api('GET', '/api/v1/profiles', { token: ctx.car.vehicleToken }), 401, '차량 토큰으로 폰 API'); }],
+    ['GIF 업로드 거부, PNG 업로드·내려받기', async () => { const g = new FormData(); g.append('file', new Blob([new TextEncoder().encode('GIF89a....')]), 'a.gif'); status(await api('POST', '/api/v1/assets', { token: U('자녀'), form: g }), 400, 'GIF'); const f = new FormData(); f.append('file', await pngBlob(), 'c.png'); const r = await api('POST', '/api/v1/assets', { token: U('자녀'), form: f }); status(r, 201, 'PNG'); ctx.asset = r.data; const img = await fetch(r.data.url); expect(img.ok && img.headers.get('content-type') === 'image/png', '이미지 내려받기'); }],
+    ['글자 대비 부족 테마 거부', async () => { const r = await api('POST', '/api/v1/themes', { token: U('자녀'), body: { name: '안보임', colors: { background: '#FFFFFF', surface: '#FFFFFF', text: '#EEEEEE' } } }); status(r, 400, '대비'); expect(String(r.data.detail).includes('대비'), '한국어 설명'); }],
+    ['테마 생성(캐릭터 포함)', async () => { const r = await api('POST', '/api/v1/themes', { token: U('자녀'), body: { name: 'QA 고양이', colors: { background: '#0D0B1E', surface: '#1C1840', primary: '#7C4DFF', onPrimary: '#FFFFFF', text: '#F5F3FF' }, characterAssetId: ctx.asset.id, characterPlacement: 'BOTTOM_LEFT', buttonStyle: 'PILL', widgetStyle: 'GLASS', ambientColor: '#7C4DFF' } }); status(r, 201, '테마'); ctx.theme = r.data; }],
+    ['남의 이미지·남의 테마 사용 거부', async () => { status(await api('POST', '/api/v1/themes', { token: U('아빠'), body: { name: 'x', backgroundAssetId: ctx.asset.id } }), 404, '남의 이미지'); status(await api('POST', '/api/v1/profiles', { token: U('아빠'), body: { name: 'x', themeId: ctx.theme.id } }), 404, '남의 테마'); }],
+    ['프로필·시트 슬롯·예약', async () => { const p = await api('POST', '/api/v1/profiles', { token: U('자녀'), body: { name: 'QA 밤', themeId: ctx.theme.id, climate: { temperature: 19, fanSpeed: 4 }, seat: { heatingLevel: 2, steeringWheelHeating: true }, light: { brightness: 70 }, display: { widgets: ['music', 'weather'] } } }); status(p, 201, '프로필'); ctx.profile = p.data; status(await api('PUT', `/api/v1/profiles/${p.data.id}/seat-positions/${ctx.car.vehicleId}`, { token: U('자녀'), body: { memorySlot: 2 } }), 200, '시트 슬롯'); status(await api('PUT', `/api/v1/vehicles/${ctx.car.vehicleId}/next-driver`, { token: U('자녀'), body: { profileId: p.data.id } }), 200, '예약'); }],
+    ['다른 MEMBER는 남의 예약 취소 불가(403)', async () => { status(await api('DELETE', `/api/v1/vehicles/${ctx.car.vehicleId}/next-driver`, { token: U('아빠') }), 403, '아빠 취소'); }],
+    ['1단계: 차량 설정만, 테마 없음', async () => { const r = await api('GET', '/vehicle-api/v1/me/next-driver', { token: ctx.car.vehicleToken }); status(r, 200, '다음 운전자'); expect(r.data.vehicleSettings.seatPosition.memorySlot === 2, '시트 슬롯 2'); expect(r.data.vehicleSettings.climate.temperature === 19, '온도 19'); expect(!('skin' in r.data), '테마가 먼저 오면 안 됨'); ctx.rid = r.data.reservationId; }],
+    ['2단계: 보고 후 웰컴 묶음(재시도 동일)', async () => { const a = await api('POST', `/vehicle-api/v1/me/next-driver/${ctx.rid}/applied`, { token: ctx.car.vehicleToken }); status(a, 200, '보고'); expect(a.data.skin.name === 'QA 고양이' && a.data.skin.buttonStyle === 'PILL', '스킨'); expect(a.data.ambientLight.color === '#7C4DFF' && a.data.ambientLight.brightness === 70, '조명'); const b = await api('POST', `/vehicle-api/v1/me/next-driver/${ctx.rid}/applied`, { token: ctx.car.vehicleToken }); expect(b.ok && b.data.greeting === a.data.greeting, '재시도 동일'); renderCar(a.data, '자동 QA 웰컴'); }],
+    ['적용 후 예약 없음 → 1탭 선택 목록', async () => { status(await api('GET', '/vehicle-api/v1/me/next-driver', { token: ctx.car.vehicleToken }), 204, '예약 없음'); const d = await api('GET', '/vehicle-api/v1/me/profiles', { token: ctx.car.vehicleToken }); expect(d.ok && d.data.length === 3, '멤버 3명'); const w = await api('POST', `/vehicle-api/v1/me/profiles/${ctx.profile.id}/applied`, { token: ctx.car.vehicleToken }); status(w, 200, '선택 적용'); }],
+    ['테마 공유 → 받기 → 재공유 불가 → 마켓', async () => { const s = await api('POST', `/api/v1/themes/${ctx.theme.id}/share`, { token: U('자녀') }); status(s, 200, '공유'); const im = await api('POST', '/api/v1/themes/import', { token: U('엄마'), body: { shareCode: s.data.shareCode.toLowerCase() } }); status(im, 201, '받기'); expect(im.data.imported, '받은 테마 표시'); status(await api('POST', `/api/v1/themes/${im.data.id}/share`, { token: U('엄마') }), 409, '재공유'); const m = await api('GET', '/api/v1/themes/market', { token: U('아빠') }); expect(m.data.some((t) => t.shareCode === s.data.shareCode && t.importCount >= 1), '마켓 노출'); }],
+    ['닉네임 변경이 인사말에 반영', async () => { status(await api('PATCH', '/api/v1/users/me', { token: U('자녀'), body: { nickname: 'QA재윤' } }), 200, '닉네임'); const w = await api('POST', `/vehicle-api/v1/me/profiles/${ctx.profile.id}/applied`, { token: ctx.car.vehicleToken }); expect(w.data.greeting.startsWith('QA재윤님'), '인사말: ' + w.data.greeting); }],
+    ['OWNER 권한: MEMBER는 이름 변경·코드 재발급 403', async () => { status(await api('PATCH', `/api/v1/vehicles/${ctx.car.vehicleId}`, { token: U('아빠'), body: { nickname: 'x' } }), 403, '이름 변경'); status(await api('POST', `/api/v1/vehicles/${ctx.car.vehicleId}/pairing-code`, { token: U('아빠') }), 403, '재발급'); }],
+    ['페어링 코드 재발급 → 이전 코드 무효', async () => { const r = await api('POST', `/api/v1/vehicles/${ctx.car.vehicleId}/pairing-code`, { token: U('엄마') }); status(r, 200, '재발급'); status(await api('POST', '/api/v1/vehicles/pair', { token: U('아빠'), body: { pairingCode: ctx.car.pairingCode } }), r.data.pairingCode === ctx.car.pairingCode ? 200 : 404, '이전 코드'); const me2 = await api('GET', '/vehicle-api/v1/me', { token: ctx.car.vehicleToken }); expect(me2.data.pairingCode === r.data.pairingCode, '차량 화면에 새 코드'); }],
+    ['OWNER는 넘기기 전 못 나감, 자녀 나가면 정리', async () => { status(await api('DELETE', `/api/v1/vehicles/${ctx.car.vehicleId}/members/me`, { token: U('엄마') }), 409, 'OWNER 나가기'); await api('PUT', `/api/v1/vehicles/${ctx.car.vehicleId}/next-driver`, { token: U('자녀'), body: { profileId: ctx.profile.id } }); status(await api('DELETE', `/api/v1/vehicles/${ctx.car.vehicleId}/members/me`, { token: U('자녀') }), 204, '자녀 나가기'); status(await api('GET', '/vehicle-api/v1/me/next-driver', { token: ctx.car.vehicleToken }), 204, '자녀 예약 정리'); const d = await api('GET', '/vehicle-api/v1/me/profiles', { token: ctx.car.vehicleToken }); expect(d.data.length === 2, '멤버 2명'); }],
+    ['잘못된 입력은 400 ProblemDetail', async () => { const r = await api('POST', '/api/v1/profiles', { token: U('아빠'), body: { name: 'x', climate: { temperature: 40 } } }); status(r, 400, '온도 40'); status(await api('GET', '/api/v1/profiles/not-a-uuid', { token: U('아빠') }), 400, '잘못된 ID'); }],
+  ];
+  for (const [name, fn] of steps) {
+    const row = document.createElement('div'); row.className = 'qa-row';
+    const t0 = performance.now();
+    try { await fn(); pass++; row.innerHTML = `<span class="mark ok">✓</span><span style="flex:1">${esc(name)}</span><span class="muted">${Math.round(performance.now() - t0)}ms</span>`; }
+    catch (e) { fail++; row.innerHTML = `<span class="mark bad">✗</span><span style="flex:1">${esc(name)}<br><span class="bad">${esc(e.message)}</span></span>`; out.appendChild(row); break; }
+    out.appendChild(row);
+  }
+  $('qaSummary').innerHTML = fail ? `<span class="bad">실패 ${fail} · 통과 ${pass}/${steps.length}</span>` : `<span class="ok">전체 통과 ${pass}/${steps.length}</span>`;
+}
+$('btnAutoQa').onclick = runAutoQa;
+
+renderUsers(); renderVehicles(); refreshPhone(); refreshCar();
+</script>
+</body>
+</html>

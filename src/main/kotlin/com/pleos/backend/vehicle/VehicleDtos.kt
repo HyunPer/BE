@@ -62,3 +62,13 @@ data class VehicleSelfResponse(
     val pairingCode: String,
     val memberCount: Int,
 )
+
+/** OWNER만. 차량 이름 변경. 빈 문자열이면 이름을 지운다. */
+data class VehicleUpdateRequest(
+    @field:Size(max = 20)
+    val nickname: String? = null,
+)
+
+data class PairingCodeResponse(val pairingCode: String)
+
+data class TransferOwnerRequest(val userId: UUID)

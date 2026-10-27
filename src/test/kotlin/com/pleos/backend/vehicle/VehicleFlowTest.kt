@@ -157,7 +157,7 @@ class VehicleFlowTest : ApiTestSupport() {
         val reservationId = mockMvc.get("/vehicle-api/v1/me/next-driver") { bearer(car.token) }
             .andReturn().response.contentAsString.read("$.reservationId")
 
-        mockMvc.delete("/api/v1/vehicles/${car.id}/next-driver") { bearer(dad) }.andExpect { status { isNoContent() } }
+        mockMvc.delete("/api/v1/vehicles/${car.id}/next-driver") { bearer(mom) }.andExpect { status { isNoContent() } }
         mockMvc.post("/vehicle-api/v1/me/next-driver/$reservationId/applied") { bearer(car.token) }
             .andExpect { status { isConflict() } }
     }

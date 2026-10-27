@@ -35,3 +35,6 @@ pleos:
     # 테마 이미지 저장 위치 (BE/data/ 아래, git 제외)
     dir: ./data/files
     max-bytes: 3145728 # 3MB
+  qa:
+    # 임시 QA 콘솔(/qa)과 데모 시드 API. 운영 배포에서는 false.
+    enabled: true

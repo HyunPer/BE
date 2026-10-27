@@ -36,6 +36,18 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 ./gradlew test
 ```
 
+## QA 콘솔 (임시 화면)
+
+화면이 나오기 전까지 기능 QA에 쓰는 웹 화면입니다. 서버를 띄우고 `http://localhost:8090/qa/`를 엽니다.
+
+- **폰 앱 쪽**: 가입·닉네임, 페어링, 차량 멤버 관리(OWNER 넘기기·내보내기·코드 재발급·나가기), 테마(색·이미지 업로드·버튼/위젯 모양)·공유·마켓, 프로필·시트 슬롯·다음 운전자 예약
+- **차량 앱 쪽**: 차량 등록·페어링 코드, 탑승 2단계 적용 시뮬레이션(SDK 실패 흉내 포함), 1탭 선택, 지금 자세 저장, 테마가 입혀진 차량 화면 미리보기
+- **데모 가족 만들기**: 엄마(OWNER)·아빠·대학생 자녀, 테마 2개, 프로필 3개, 시트 슬롯, 자녀의 다음 운전자 예약을 한 번에 생성(`POST /qa/api/seed`)
+- **자동 QA 실행**: 데모 시나리오와 예외 상황 20단계를 실제 API로 순서대로 검사하고 통과/실패를 표시
+- **요청 로그**: 모든 요청·응답을 펼쳐 볼 수 있음
+
+운영 배포에서는 `pleos.qa.enabled=false`로 끕니다(콘솔과 시드 API가 모두 사라짐). QA 기록은 [docs/QA.md](docs/QA.md)에 있습니다.
+
 ## API 개요
 
 인증은 모두 `Authorization: Bearer <토큰>` 헤더로 합니다. 토큰이 없거나 틀리면 401입니다.
@@ -51,6 +63,7 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | --- | --- | --- | --- |
 | POST | `/users` | 가입 (닉네임만, 토큰 불필요) | 201 |
 | GET | `/users/me` | 내 정보 | 200 |
+| PATCH | `/users/me` | 닉네임 변경 (웰컴 인사말에 바로 반영) | 200 |
 | GET | `/profiles` | 내 프로필 목록 (생성 순) | 200 |
 | GET | `/profiles/{id}` | 프로필 조회 | 200 |
 | POST | `/profiles` | 프로필 생성 | 201 + `Location` |
@@ -62,9 +75,14 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | POST | `/vehicles/pair` | 차량 화면의 6자리 코드로 페어링 (첫 사람 OWNER) | 200 |
 | GET | `/vehicles` | 내 차량 목록 | 200 |
 | GET | `/vehicles/{vehicleId}` | 차량 상세 + 멤버 | 200 |
+| PATCH | `/vehicles/{vehicleId}` | 차 이름 변경 (OWNER만) | 200 |
+| POST | `/vehicles/{vehicleId}/pairing-code` | 페어링 코드 재발급, 이전 코드 즉시 무효 (OWNER만) | 200 |
+| POST | `/vehicles/{vehicleId}/owner` | OWNER 넘기기 `{userId}` (OWNER만) | 200 |
+| DELETE | `/vehicles/{vehicleId}/members/me` | 차량에서 나가기 (다른 멤버가 있으면 OWNER는 먼저 넘겨야 함, 409) | 204 |
+| DELETE | `/vehicles/{vehicleId}/members/{userId}` | 멤버 내보내기 (OWNER만) | 204 |
 | PUT | `/vehicles/{vehicleId}/next-driver` | 다음 운전자 예약 `{profileId}` | 200 |
 | GET | `/vehicles/{vehicleId}/next-driver` | 현재 대기 예약 (없으면 204) | 200/204 |
-| DELETE | `/vehicles/{vehicleId}/next-driver` | 대기 예약 취소 | 204 |
+| DELETE | `/vehicles/{vehicleId}/next-driver` | 대기 예약 취소 (예약한 사람이나 OWNER만, 다른 MEMBER는 403) | 204 |
 | POST | `/assets` | 테마 이미지 업로드 (multipart `file`, PNG·JPEG·WEBP, 3MB 이하, GIF 불가) | 201 |
 | GET | `/themes` | 내 테마 목록 (직접 만든 것 + 공유받은 것) | 200 |
 | GET | `/themes/{id}` | 테마 조회 | 200 |
@@ -95,7 +113,9 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 
 ### 공통 규칙
 
-- 남의 프로필이나 내가 멤버가 아닌 차량은 404로 응답합니다(존재 여부 비노출).
+- 남의 프로필이나 내가 멤버가 아닌 차량은 404로 응답합니다(존재 여부 비노출). 같은 차 안에서 권한이 모자라면(MEMBER가 OWNER 기능 호출 등) 403입니다.
+- 멤버가 나가거나 내보내지면 그 사람의 대기 예약은 취소되고, 그 차량에 저장한 시트 자세는 지워집니다. 프로필 자체는 남습니다.
+- 동시에 같은 요청이 겹쳐 데이터 제약에 걸리면 409, 예상하지 못한 오류는 내부 정보 없이 500 ProblemDetail로 응답합니다.
 - 오류는 모두 RFC 9457 ProblemDetail(`application/problem+json`)이고, `detail`에 한국어 설명이 들어 있습니다.
 
 ## 프로필 설정값
@@ -180,12 +200,12 @@ src/main/kotlin/com/pleos/backend
 ├── reservation/   # 다음 운전자 예약 (폰 앱 쪽 API)
 ├── vehicleapp/    # 차량 앱 전용 API
 ├── theme/         # 테마(색·배경·캐릭터·버튼/위젯 모양), 공유·마켓, 웰컴 묶음 조립
-└── asset/         # 테마 이미지 업로드·내려받기
+├── asset/         # 테마 이미지 업로드·내려받기
+└── qa/            # 임시 QA 콘솔(/qa)과 데모 시드 API (개발 서버 전용)
 ```
 
 ## 다음 작업 후보
 
 단계별 계획은 [docs/DESIGN.md](docs/DESIGN.md#6-단계별-로드맵)에 있습니다.
 
-- 멤버 관리(내보내기·나가기), 페어링 코드 재발급
 - 운영 DB(PostgreSQL + Flyway) 전환과 배포

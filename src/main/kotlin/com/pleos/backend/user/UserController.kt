@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -27,4 +28,8 @@ class UserController(private val service: UserService) {
     @Operation(summary = "내 정보")
     @GetMapping("/me")
     fun me(user: AuthUser): UserResponse = service.me(user.id)
+
+    @Operation(summary = "닉네임 변경", description = "차량 웰컴 인사말·멤버 목록에 바로 반영된다.")
+    @PatchMapping("/me")
+    fun update(user: AuthUser, @Valid @RequestBody request: UpdateUserRequest): UserResponse = service.update(user.id, request)
 }

@@ -20,6 +20,12 @@ data class SignUpRequest(
     val nickname: String,
 )
 
+data class UpdateUserRequest(
+    @field:NotBlank
+    @field:Size(max = 20)
+    val nickname: String,
+)
+
 data class UserResponse(val id: UUID, val nickname: String, val createdAt: Instant)
 
 /** accessToken은 이 응답에서만 받을 수 있다. 폰 앱은 기기에 저장하고 Authorization: Bearer 헤더로 보낸다. */
@@ -38,6 +44,15 @@ class UserService(private val repository: UserRepository) {
         return SignUpResponse(user.toResponse(), token)
     }
 
-    fun me(userId: UUID): UserResponse =
-        repository.findById(userId).orElseThrow { notFound("사용자를 찾을 수 없습니다: $userId") }.toResponse()
+    fun me(userId: UUID): UserResponse = load(userId).toResponse()
+
+    @Transactional
+    fun update(userId: UUID, request: UpdateUserRequest): UserResponse {
+        val user = load(userId)
+        user.nickname = request.nickname.trim()
+        return user.toResponse()
+    }
+
+    private fun load(userId: UUID): User =
+        repository.findById(userId).orElseThrow { notFound("사용자를 찾을 수 없습니다: $userId") }
 }
