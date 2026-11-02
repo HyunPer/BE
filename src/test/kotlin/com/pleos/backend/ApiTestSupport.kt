@@ -18,7 +18,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockHttpServletRequestDsl
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
-
+import com.pleos.backend.history.ApplyLogRepository
 /** API 통합 테스트 공통: 매 테스트 전 DB 비우기, 가입·차량 등록 헬퍼. */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,7 +32,7 @@ abstract class ApiTestSupport {
     @Autowired lateinit var themes: ThemeRepository
     @Autowired lateinit var assets: AssetRepository
     @Autowired lateinit var seatPositions: SeatPositionRepository
-
+    @Autowired lateinit var applyLogs: ApplyLogRepository
     @BeforeEach
     fun cleanDatabase() {
         reservations.deleteAll()
@@ -43,6 +43,7 @@ abstract class ApiTestSupport {
         themes.deleteAll()
         assets.deleteAll()
         users.deleteAll()
+        applyLogs.deleteAll()
     }
 
     data class RegisteredVehicle(val id: String, val token: String, val pairingCode: String)

@@ -83,6 +83,7 @@ JDK 21이 `JAVA_HOME`에 잡혀 있으면 됩니다.
 | PUT | `/vehicles/{vehicleId}/next-driver` | 다음 운전자 예약 `{profileId}` | 200 |
 | GET | `/vehicles/{vehicleId}/next-driver` | 현재 대기 예약 (없으면 204) | 200/204 |
 | DELETE | `/vehicles/{vehicleId}/next-driver` | 대기 예약 취소 (예약한 사람이나 OWNER만, 다른 MEMBER는 403) | 204 |
+| GET | `/vehicles/{vehicleId}/history?limit=20` | 최근 탑승 기록 최신순 (누가·어떤 프로필·예약/1탭, limit 1–50). 같은 차·같은 프로필은 1분 안에 한 번만 기록, 프로필을 지워도 남음 | 200 |
 | POST | `/assets` | 테마 이미지 업로드 (multipart `file`, PNG·JPEG·WEBP, 3MB 이하, GIF 불가) | 201 |
 | GET | `/themes` | 내 테마 목록 (직접 만든 것 + 공유받은 것) | 200 |
 | GET | `/themes/{id}` | 테마 조회 | 200 |

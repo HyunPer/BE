@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
+import com.pleos.backend.history.ApplySource
+import com.pleos.backend.history.ProfileAppliedEvent
+import org.springframework.context.ApplicationEventPublisher
 
 interface ReservationRepository : JpaRepository<Reservation, UUID> {
     fun findFirstByVehicleIdAndStatus(vehicleId: UUID, status: ReservationStatus): Reservation?
@@ -63,6 +66,7 @@ class ReservationService(
     private val users: UserRepository,
     private val welcome: WelcomeService,
     private val seatPositions: SeatPositionService,
+    private val events: ApplicationEventPublisher,
 ) {
 
     // ── 폰 앱 ──
@@ -74,7 +78,13 @@ class ReservationService(
         val profile = profiles.findByIdAndOwnerId(request.profileId, userId)
             ?: throw notFound("프로필을 찾을 수 없습니다: ${request.profileId}")
         reservations.findFirstByVehicleIdAndStatus(vehicleId, ReservationStatus.PENDING)?.cancel()
-        val saved = reservations.saveAndFlush(Reservation(vehicleId = vehicleId, userId = userId, profileId = profile.requireId()))
+        val saved = reservations.saveAndFlush(
+            Reservation(
+                vehicleId = vehicleId,
+                userId = userId,
+                profileId = profile.requireId()
+            )
+        )
         return toResponse(saved, profile)
     }
 
@@ -97,7 +107,8 @@ class ReservationService(
     /** 멤버가 나가면 그 사람의 대기 예약은 의미가 없다. */
     @EventListener
     fun onMemberLeft(event: MemberLeftEvent) {
-        reservations.findFirstByVehicleIdAndUserIdAndStatus(event.vehicleId, event.userId, ReservationStatus.PENDING)?.cancel()
+        reservations.findFirstByVehicleIdAndUserIdAndStatus(event.vehicleId, event.userId, ReservationStatus.PENDING)
+            ?.cancel()
     }
 
     // ── 차량 앱 ──
@@ -122,16 +133,20 @@ class ReservationService(
     fun markApplied(vehicleId: UUID, reservationId: UUID): WelcomeResponse {
         val reservation = reservations.findByIdAndVehicleId(reservationId, vehicleId)
             ?: throw notFound("예약을 찾을 수 없습니다: $reservationId")
-        when (reservation.status) {
-            ReservationStatus.PENDING -> reservation.markApplied()
-            ReservationStatus.APPLIED -> Unit
+        val firstReport = when (reservation.status) {
+            ReservationStatus.PENDING -> { reservation.markApplied(); true }
+            ReservationStatus.APPLIED -> false
             ReservationStatus.CANCELLED -> throw conflict("이미 취소된 예약입니다: $reservationId")
         }
         val profile = profiles.findById(reservation.profileId).orElse(null)
             ?: throw notFound("예약된 프로필이 삭제되었습니다: ${reservation.profileId}")
+       if (firstReport) {
+           events.publishEvent(
+                ProfileAppliedEvent(vehicleId, reservation.userId, profile.requireId(), profile.name, ApplySource.RESERVATION),
+            )
+        }
         return welcome.build(profile, nicknameOf(reservation.userId))
     }
-
     /** 예약된 프로필이 그 사이 삭제됐다면 예약이 없는 것으로 본다. */
     private fun pendingWithProfile(vehicleId: UUID): Pair<Reservation, Profile>? {
         val reservation = reservations.findFirstByVehicleIdAndStatus(vehicleId, ReservationStatus.PENDING) ?: return null

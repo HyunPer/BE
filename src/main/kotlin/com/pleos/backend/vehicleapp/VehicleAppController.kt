@@ -34,6 +34,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
+import com.pleos.backend.history.ApplySource
+import com.pleos.backend.history.ProfileAppliedEvent
+import org.springframework.context.ApplicationEventPublisher
 
 /** 1탭 선택 화면용. 예약이 없을 때의 대체안. 테마는 적용 보고 후에 받는다. */
 data class DriverProfilesResponse(
@@ -50,6 +53,7 @@ class VehicleAppService(
     private val profiles: ProfileRepository,
     private val welcome: WelcomeService,
     private val seatPositions: SeatPositionService,
+    private val events: ApplicationEventPublisher,
 ) {
     fun driverProfiles(vehicleId: UUID): List<DriverProfilesResponse> {
         val userIds = vehicles.memberUserIds(vehicleId)
@@ -58,16 +62,23 @@ class VehicleAppService(
         val seats = seatPositions.findForVehicle(vehicleId, all.map { it.requireId() })
         val byOwner = all.groupBy { it.ownerId }
         return userIds.map { id ->
-            DriverProfilesResponse(id, nicknames[id].orEmpty(), byOwner[id].orEmpty().map { it.toApplicable(seats[it.requireId()]) })
+            DriverProfilesResponse(
+                id,
+                nicknames[id].orEmpty(),
+                byOwner[id].orEmpty().map { it.toApplicable(seats[it.requireId()]) })
         }
     }
 
     /** 1탭으로 고른 프로필의 차량 설정을 적용한 뒤 호출한다. 이 차량 멤버의 프로필만 허용. */
+    @Transactional
     fun welcomeForSelected(vehicleId: UUID, profileId: UUID): WelcomeResponse {
         val profile = profiles.findById(profileId).orElse(null)
             ?.takeIf { it.ownerId in vehicles.memberUserIds(vehicleId) }
             ?: throw notFound("프로필을 찾을 수 없습니다: $profileId")
         val nickname = users.findById(profile.ownerId).map { it.nickname }.orElse("")
+        events.publishEvent(
+            ProfileAppliedEvent(vehicleId, profile.ownerId, profile.requireId(), profile.name, ApplySource.SELECTED),
+        )
         return welcome.build(profile, nickname)
     }
 }
