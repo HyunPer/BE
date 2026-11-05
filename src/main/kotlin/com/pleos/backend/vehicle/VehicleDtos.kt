@@ -52,6 +52,8 @@ data class VehicleDetailResponse(
     val nickname: String?,
     val myRole: VehicleRole,
     val members: List<VehicleMemberResponse>,
+    /** 가족 초대용 현재 연결 코드. 차 화면에 뜨는 것과 같고 멤버에게만 보인다. 바꾸려면 OWNER가 재발급. */
+    val pairingCode: String,
 )
 
 /** 차량 앱에서 보는 자기 자신. 페어링 코드를 화면에 다시 띄울 때 쓴다. */

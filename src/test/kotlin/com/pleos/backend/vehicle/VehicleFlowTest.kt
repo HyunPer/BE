@@ -45,6 +45,7 @@ class VehicleFlowTest : ApiTestSupport() {
             jsonPath("$.members", hasSize<Any>(2))
             jsonPath("$.members[0].nickname") { value("엄마") }
             jsonPath("$.members[1].role") { value("MEMBER") }
+            jsonPath("$.pairingCode") { value(car.pairingCode) } // 폰에서 가족 초대용으로 본다
         }
         mockMvc.get("/api/v1/vehicles") { bearer(dad) }.andExpect { jsonPath("$", hasSize<Any>(1)) }
         mockMvc.get("/vehicle-api/v1/me") { bearer(car.token) }.andExpect {

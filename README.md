@@ -64,7 +64,7 @@ FE 저장소의 E2E 테스트로 실제 서버를 상대로 쉼표 흐름 전체
 | PUT | `/users/me/condition` | 내 컨디션 저장 | 200 |
 | POST | `/vehicles/pair` | 차량 화면의 6자리 코드로 페어링 (첫 사람 OWNER) | 200 |
 | GET | `/vehicles` | 내 차량 목록 | 200 |
-| GET | `/vehicles/{vehicleId}` | 차량 상세 + 멤버 | 200 |
+| GET | `/vehicles/{vehicleId}` | 차량 상세 + 멤버 + 가족 초대용 연결 코드 | 200 |
 | PATCH | `/vehicles/{vehicleId}` | 차 이름 변경 (OWNER만) | 200 |
 | POST | `/vehicles/{vehicleId}/pairing-code` | 페어링 코드 재발급, 이전 코드 즉시 무효 (OWNER만) | 200 |
 | POST | `/vehicles/{vehicleId}/owner` | OWNER 넘기기 `{userId}` (OWNER만) | 200 |

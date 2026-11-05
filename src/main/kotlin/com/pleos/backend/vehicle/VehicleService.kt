@@ -87,6 +87,7 @@ class VehicleService(
             nickname = vehicle.nickname,
             myRole = me.role,
             members = all.map { VehicleMemberResponse(it.userId, nicknames[it.userId].orEmpty(), it.role, it.createdAt) },
+            pairingCode = vehicle.pairingCode,
         )
     }
 
