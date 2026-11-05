@@ -12,7 +12,7 @@ class OpenApiDocsTest : ApiTestSupport() {
     fun `폰 앱 문서에는 폰 API만, 인증 주체 파라미터는 숨긴다`() {
         mockMvc.get("/v3/api-docs/phone").andExpect {
             status { isOk() }
-            jsonPath("$.paths['/api/v1/profiles']") { exists() }
+            jsonPath("$.paths['/api/v1/vehicles']") { exists() }
             jsonPath("$.paths['/vehicle-api/v1/me']") { doesNotExist() }
             jsonPath("$.components.securitySchemes.bearer.scheme") { value("bearer") }
             content { string(not(containsString("AuthUser"))) }
@@ -23,8 +23,8 @@ class OpenApiDocsTest : ApiTestSupport() {
     fun `차량 앱 문서에는 차량 API만`() {
         mockMvc.get("/v3/api-docs/vehicle").andExpect {
             status { isOk() }
-            jsonPath("$.paths['/vehicle-api/v1/me/next-driver']") { exists() }
-            jsonPath("$.paths['/api/v1/profiles']") { doesNotExist() }
+            jsonPath("$.paths['/vehicle-api/v1/me']") { exists() }
+            jsonPath("$.paths['/api/v1/vehicles']") { doesNotExist() }
             content { string(not(containsString("AuthVehicle"))) }
         }
     }

@@ -50,13 +50,13 @@ class VehicleController(private val service: VehicleService) {
 
     @Operation(
         summary = "차량에서 나가기",
-        description = "내 대기 예약은 취소되고, 이 차량에 저장한 내 시트 자세는 지워진다. 다른 멤버가 있으면 OWNER는 먼저 넘겨야 한다(409).",
+        description = "다른 멤버가 있으면 OWNER는 먼저 넘겨야 한다(409). 내가 남긴 체크인 기록은 남는다.",
     )
     @DeleteMapping("/{vehicleId}/members/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun leave(user: AuthUser, @PathVariable vehicleId: UUID) = service.leave(user.id, vehicleId)
 
-    @Operation(summary = "멤버 내보내기", description = "OWNER만. 그 멤버의 대기 예약 취소, 이 차량 시트 자세 삭제.")
+    @Operation(summary = "멤버 내보내기", description = "OWNER만.")
     @DeleteMapping("/{vehicleId}/members/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun removeMember(user: AuthUser, @PathVariable vehicleId: UUID, @PathVariable userId: UUID) =

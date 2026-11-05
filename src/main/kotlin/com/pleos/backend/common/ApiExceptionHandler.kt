@@ -39,7 +39,7 @@ class ApiException(status: HttpStatus, detail: String) :
 
 fun unauthorized(detail: String) = ApiException(HttpStatus.UNAUTHORIZED, detail)
 
-/** 존재는 드러나도 되지만 권한이 없는 경우(같은 차 멤버가 남의 예약을 지우려는 등). */
+/** 존재는 드러나도 되지만 권한이 없는 경우(같은 차 MEMBER가 OWNER 기능을 부르는 등). */
 fun forbidden(detail: String) = ApiException(HttpStatus.FORBIDDEN, detail)
 
 /** 남의 리소스도 존재를 드러내지 않도록 403 대신 404로 응답한다. */
